@@ -696,6 +696,22 @@ body.plan-dragging{cursor:col-resize!important;user-select:none!important}
 #plan70ServerPanel .plan70-code-row button{padding:7px 9px}
 @media print{#plan69TitleDialog,#plan70ServerPanel{display:none!important}}
 </style>
+<style id="safeplan-master-auth-v1">
+#plan70ServerPanel .plan70-code-row{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+#plan70ServerPanel #plan70Label{min-width:90px;flex:1 1 120px}
+#plan70ServerPanel #plan70Code{min-width:145px;flex:2 1 160px}
+#plan70ServerPanel .plan70-controls{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:8px 0}
+#plan71Master{border-top:1px solid #cfdfef;margin-top:12px;padding-top:9px}
+#plan71Master[hidden]{display:none!important}
+#plan71Master h4{margin:4px 0 7px;color:#153b63;font-size:13px}
+#plan71Master button,#plan71Master select{font-size:11px;border-radius:4px;border:1px solid #a7c6e8;background:#fff;color:#125c9f;padding:5px 7px;cursor:pointer}
+#plan71Master label{font-size:11px;font-weight:700}
+#plan71Master .plan71-code{font-size:12px;color:#185e94;white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0}
+#plan71Master .plan71-list{overflow-x:auto}
+#plan71Master table{min-width:420px;width:100%;font-size:11px}
+#plan71Master th,#plan71Master td{white-space:nowrap;padding:5px 4px}
+#plan71Master .plan71-disabled{color:#a33439}
+</style>
 </head><body>
 <header class="plan-topbar" id="planTopbar">
 <div class="top-brand"><span class="top-app-icon">▤</span><strong>안전 작업계획서</strong><span class="top-separator"></span><span class="top-sheet-label" id="headerSheetLabel">01 · 작업개요 · 안전대책</span></div><button aria-expanded="true" class="plan-preview-toggle" id="planPreviewToggle" onclick="togglePlanPreview()" title="미리보기 숨기기/보기" type="button">◀ 미리보기 숨기기</button>
@@ -5642,7 +5658,7 @@ if(searchPane){
     box.replaceChildren();box.classList.add('plan45-results');
     if(!rows.length){searchPage=0;box.append(make('div','plan18-empty','검색 조건에 맞는 계획서가 없습니다.'));return}
     const wrap=make('div','plan45-table-wrap'),table=make('table','plan45-table');
-    const thead=make('thead'),thRow=make('tr');['관리','작성일(수정일)','제목','문서번호','업체','기종','모델명','성능','자격·면허','반입일','작업위치','최종 저장'].forEach(x=>thRow.append(make('th','',x)));thead.append(thRow);table.append(thead);
+    const thead=make('thead'),thRow=make('tr');['관리','문서번호','작성일(수정일)','제목','업체','기종','모델명','성능','자격·면허','반입일','작업위치','최종 저장'].forEach(x=>thRow.append(make('th','',x)));thead.append(thRow);table.append(thead);
     const body=make('tbody');
     const pageCount=Math.max(1,Math.ceil(rows.length/SEARCH_PAGE_SIZE));
     searchPage=Math.min(searchPage,pageCount-1);
@@ -5650,15 +5666,13 @@ if(searchPane){
       const tr=make('tr');if(data.id===id)tr.classList.add('plan45-current');
       const eq=getEq(doc);const cells=[id,doc.company||'',eq.map(x=>x.name||x.type||'').join(' / '),eq.map(x=>x.model||'').join(' / '),eq.map(x=>x.performance||x.spec||'').join(' / '),eq.map(x=>planEquipmentLicenseValue(x)).join(' / '),eq.map(x=>x.intake||x.arrivalDate||'').join(' / '),getLoc(doc).join(' / '),doc.updatedAt?new Date(doc.updatedAt).toLocaleString('ko-KR'):''];
       const delTd=make('td','plan69-doc-manage');const del=make('button','btn danger plan48-delete-doc','삭제');del.type='button';del.title='선택한 문서 삭제';del.onclick=()=>window.plan48RemoveDocument(id);const copy=make('button','btn plan69-copy-btn','복사');copy.type='button';copy.title='기존 원본을 보존하고 새 문서번호로 복사';copy.onclick=()=>window.plan69CopyDocument(id);delTd.append(del,copy);tr.append(delTd);
+      const openTd=make('td');const open=make('button','plan48-open-date',id);open.type='button';open.title='문서번호 클릭하여 계획서 열기';open.onclick=()=>plan18OpenDocument(id);openTd.append(open);tr.append(openTd);
       const modified=doc.updatedAt?new Date(doc.updatedAt):null;
       const modifiedText=modified&&!Number.isNaN(modified.getTime())?[modified.getFullYear(),String(modified.getMonth()+1).padStart(2,'0'),String(modified.getDate()).padStart(2,'0')].join('-'):'';
       const dateTd=make('td','',(doc.writtenDate||'날짜 없음')+(modifiedText?' ('+modifiedText+')':''));tr.append(dateTd);
       const titleTd=make('td','plan69-title-cell');const titleBtn=make('button','plan69-title-btn',doc.planTitle||'제목 입력');titleBtn.type='button';titleBtn.title='제목 클릭하여 수정';titleBtn.onclick=()=>window.plan69EditTitle(id);titleTd.append(titleBtn);tr.append(titleTd);
-      for(const [index,text] of cells.entries()){
-       const td=make('td');td.title=text||'';
-       if(index===0){const open=make('button','plan48-open-date',text||'-');open.type='button';open.title='문서번호를 클릭해 계획서 열기';open.onclick=()=>plan18OpenDocument(id);td.append(open)}
-       else td.textContent=text||'-';
-       tr.append(td);
+      for(const text of cells.slice(1)){
+       const td=make('td');td.title=text||'';td.textContent=text||'-';tr.append(td);
       }
       body.append(tr);
     }
@@ -7139,15 +7153,32 @@ plan66InitializeStorage();
  };
 })();
 
-/* Apps Script 독립 백업: 로컬이 기본 저장소, 인증된 기기에서만 수동 실행. */
+/* Apps Script 독립 백업: 마스터가 발급한 코드로 기기별 서버 권한을 부여. */
 (()=>{
  const ENDPOINT='https://script.google.com/macros/s/AKfycbxtaG1jP-Ph0s7QUkLrk7LYjQCQQFoEWuybyi3_6fmWt6TbhvT__8-1TgYof4aotLG-/exec';
  const DEVICE_KEY='safeplan_server_device_v1';
  const panel=document.createElement('section');panel.id='plan70ServerPanel';
- panel.innerHTML='<h3>서버 백업 (로컬 자료 유지)</h3><div class="plan70-code-row"><input type="text" id="plan70Code" autocomplete="off" maxlength="19" placeholder="10분 유효 등록코드"><button class="btn" type="button" id="plan70Register">기기 등록</button></div><div class="plan70-controls"><button type="button" id="plan70Backup">서버 백업</button><button type="button" id="plan70List">백업 목록</button><button type="button" id="plan70Verify">선택 백업 시험 복원 검증</button></div><select aria-label="서버 백업 목록" id="plan70Backups"><option value="">완료된 서버 백업을 조회하세요</option></select><div role="status" id="plan70Status"></div><div class="plan70-hint">기기등록 후 수동 백업합니다. 서버 백업은 로컬 폴더/기존 백업을 덮어쓰지 않습니다. 시험 복원 검증은 저장 자료를 변경하지 않습니다.</div>';
+ panel.innerHTML=`<h3>서버 백업 · 기기등록</h3>
+ <p class="plan70-hint">처음 마스터 등록은 Apps Script 편집기에서 <code>createMasterRegistrationCode</code>를 한 번 실행합니다. 그다음부터 일반 기기는 마스터가 발급한 16자리 일회용 코드로 등록합니다.</p>
+ <div class="plan70-code-row"><input type="text" id="plan70Label" autocomplete="off" maxlength="60" placeholder="기기 표시 이름 (예: 현장 PC)"><input type="text" id="plan70Code" autocomplete="off" maxlength="19" placeholder="10분 유효 등록코드"><button class="btn" type="button" id="plan70Register">기기 등록</button></div>
+ <div class="plan70-controls"><button type="button" id="plan70Check">기기 권한 확인</button><button type="button" id="plan70Backup">서버 백업</button><button type="button" id="plan70List">백업 목록</button><button type="button" id="plan70Verify">선택 백업 시험 복원 검증</button></div>
+ <select aria-label="서버 백업 목록" id="plan70Backups"><option value="">완료된 서버 백업을 조회하세요</option></select>
+ <div role="status" id="plan70Status"></div>
+ <div id="plan71Master" hidden>
+   <h4>마스터 · 기기별 권한 관리</h4>
+   <div class="plan70-controls"><label for="plan71NewRole">신규 기기 권한</label><select id="plan71NewRole"><option value="editor">서버 백업·조회</option><option value="viewer">서버 조회 전용</option></select><button id="plan71Issue" type="button">1회용 등록코드 발급</button><button id="plan71Reload" type="button">등록기기 조회</button></div>
+   <div id="plan71CodeResult" class="plan71-code" aria-live="polite"></div>
+   <div id="plan71DeviceList" class="plan71-list"></div>
+   <p class="plan70-hint">기기 사용중지를 선택하면 서버 백업 접근이 차단됩니다. 서버에 이미 저장된 백업과 PC 폴더 자료는 지우지 않습니다. PC 로컬 파일의 열람 권한을 이 기능만으로 통제할 수는 없습니다.</p>
+ </div>
+ <div class="plan70-hint">로컬 저장 폴더와 서버 백업은 별개입니다. 서버 기기등록용 토큰만 브라우저에 보관합니다. 백업은 사용자가 누를 때만 실행되고, 시험 복원 검증은 저장된 자료를 바꾸지 않습니다.</div>`;
  const settings=document.getElementById('planDataPane_settings');
  if(settings)settings.prepend(panel);else document.getElementById('planInputPanel')?.append(panel);
  const $70=id=>document.getElementById(id);let busy=false;
+ let confirmedRole=null;
+ const roleName=role=>role==='master'?'마스터':role==='viewer'?'서버 조회 전용':'서버 백업·조회';
+ function markRole(role){confirmedRole=role;$70('plan71Master').hidden=role!=='master';$70('plan70Backup').disabled=role==='viewer';}
+
  function status(message){$70('plan70Status').textContent=message}
  function credentials(){try{const obj=JSON.parse(localStorage.getItem(DEVICE_KEY)||'null');return obj&&obj.deviceId&&obj.deviceToken?obj:null}catch(_){return null}}
  function randomHex(n=32){const array=new Uint8Array(n);crypto.getRandomValues(array);return Array.from(array,b=>b.toString(16).padStart(2,'0')).join('')}
@@ -7175,18 +7206,47 @@ plan66InitializeStorage();
   throw Error('응답 확인 기한이 지났습니다. 동일 백업을 반복 저장하지 말고 서버 백업 목록을 먼저 확인하세요.');
  }
  function authorized(action,more={}){const c=credentials();if(!c)throw Error('먼저 등록코드를 입력하여 기기를 등록하세요.');return serverRequest(action,{deviceId:c.deviceId,deviceToken:c.deviceToken,...more})}
+ async function checkAccess(){const c=credentials();if(!c){markRole(null);status('미등록 기기 · 마스터에게 등록코드를 요청하세요.');return null;}
+  try{const r=await authorized('ping');markRole(r.role);status('등록 기기 확인 완료 · '+r.userName+' · '+roleName(r.role));return r;}
+  catch(e){markRole(null);status('서버 기기인증 실패: '+e.message+' · 관리자에게 문의하세요.');return null;}}
+
  async function run(message,callback){if(busy)return;busy=true;panel.querySelectorAll('button').forEach(b=>b.disabled=true);status(message);
-  try{await callback()}catch(e){console.error('서버 백업 작업 오류',e);status('실패: '+e.message);alert('서버 백업 오류: '+e.message)}finally{busy=false;panel.querySelectorAll('button').forEach(b=>b.disabled=false)}
+  try{await callback()}catch(e){console.error('서버 백업 작업 오류',e);status('실패: '+e.message);alert('서버 백업 오류: '+e.message)}finally{busy=false;panel.querySelectorAll('button').forEach(b=>b.disabled=false);if(confirmedRole==='viewer')$70('plan70Backup').disabled=true}
  }
- const c=credentials();status(c?'기기 등록정보가 있습니다. [백업 목록] 또는 [서버 백업]을 선택하세요.':'서버 응답 확인 완료. 다음으로 Apps Script에서 발급한 등록코드를 입력하세요.');
+ const c=credentials();status(c?'기기 인증 확인 중…':'기기 미등록 · 마스터에게 16자리 등록코드를 요청하세요.');if(c)checkAccess();
  $70('plan70Register').onclick=()=>run('등록코드 확인 중…',async()=>{
   if(credentials()&&!confirm('이 HTML에 이미 등록된 기기가 있습니다. 새 기기로 다시 등록할까요? 기존 등록정보를 바꾸려는 경우에만 확인하세요.'))return;
   const code=$70('plan70Code').value.replace(/\s/g,'').toUpperCase();if(!/^[A-F0-9]{16}$/.test(code))throw Error('Apps Script에서 발급한 16자리 등록코드를 입력하세요.');
-  const id='d_'+randomHex(12),label='PC 브라우저 / '+new Date().toLocaleDateString('ko-KR');
+  const id='d_'+randomHex(12),label=$70('plan70Label').value.trim()||('브라우저 / '+new Date().toLocaleDateString('ko-KR'));
   const result=await serverRequest('registerDevice',{deviceId:id,deviceLabel:label,registrationCode:code});
   const record={deviceId:result.deviceId,deviceToken:result.deviceToken,userId:result.userId,userName:result.userName};
   try{localStorage.setItem(DEVICE_KEY,JSON.stringify(record))}catch(e){throw Error('기기 등록 성공 후 브라우저에 저장하지 못했습니다. 새 등록코드를 발급받아야 할 수 있습니다.')}
-  $70('plan70Code').value='';status('기기 등록 완료 · '+result.userName+'\n기기 ID는 이 브라우저에만 보관합니다.');
+  $70('plan70Code').value='';markRole(result.role);status('기기 등록 완료 · '+result.userName+' · '+roleName(result.role)+'\n등록 토큰만 현재 브라우저에 보관합니다.');
+ });
+ $70('plan70Check').onclick=()=>run('기기 권한 확인 중…',async()=>{await checkAccess()});
+ async function deviceList(){const r=await authorized('adminListDevices');const wrap=$70('plan71DeviceList');wrap.replaceChildren();
+  const table=document.createElement('table'),head=document.createElement('thead'),row=document.createElement('tr');
+  for(const label of ['기기 표시명','등록일','권한','상태','관리']){const cell=document.createElement('th');cell.textContent=label;row.append(cell)}head.append(row);table.append(head);
+  const body=document.createElement('tbody');
+  for(const d of r.devices||[]){const tr=document.createElement('tr');
+   for(const label of [d.label,d.createdAt?.slice(0,10)||'',roleName(d.role),d.revoked?'사용중지':'활성']){const td=document.createElement('td');td.textContent=label;if(d.revoked)td.classList.add('plan71-disabled');tr.append(td)}
+   const actions=document.createElement('td');
+   if(d.isMaster){actions.textContent='마스터';}
+   else {const role=document.createElement('select');for(const [value,title] of [['editor','백업·조회'],['viewer','조회 전용']]){const o=document.createElement('option');o.value=value;o.textContent=title;role.append(o)}role.value=d.role==='viewer'?'viewer':'editor';
+    role.onchange=()=>run('권한 변경 중…',async()=>{await authorized('adminSetDevice',{targetDeviceId:d.deviceId,role:role.value});await deviceList();status('기기 권한 변경 완료')});
+    const toggle=document.createElement('button');toggle.type='button';toggle.textContent=d.revoked?'사용 재개':'사용 중지';toggle.onclick=()=>{if(!confirm('['+d.label+'] 기기의 서버 백업 사용을 '+(d.revoked?'재개':'중지')+'할까요? 기존 자료는 삭제하지 않습니다.'))return;
+     run('기기 사용 상태 변경 중…',async()=>{await authorized('adminSetDevice',{targetDeviceId:d.deviceId,revoked:!d.revoked});await deviceList();status('기기 사용 상태 변경 완료')})};
+    actions.append(role,toggle);
+   }
+   tr.append(actions);body.append(tr)
+  }
+  table.append(body);wrap.append(table);return r.devices?.length||0;
+ }
+ $70('plan71Reload').onclick=()=>run('등록기기 조회 중…',async()=>{const count=await deviceList();status('등록기기 '+count+'대 조회 완료')});
+ $70('plan71Issue').onclick=()=>run('일회용 등록코드 발급 중…',async()=>{
+  const role=$70('plan71NewRole').value,r=await authorized('adminCreateCode',{role});
+  $70('plan71CodeResult').textContent='발급된 일회용 코드: '+r.registrationCode+'\n권한: '+roleName(r.role)+' · 10분 내 1회만 등록 가능';
+  status('등록코드를 발급했습니다. 승인할 사람에게만 직접 전달하세요.');
  });
  $70('plan70Backup').onclick=()=>run('로컬 자료 안전 저장 후 서버 백업 중…',async()=>{
   if(!await plan66FlushPersistence())throw Error('로컬 자동 저장 실패. 현재 자료를 먼저 보관하세요.');
