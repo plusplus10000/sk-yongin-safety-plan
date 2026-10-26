@@ -702,7 +702,7 @@ body.plan-dragging{cursor:col-resize!important;user-select:none!important}
 #plan70ServerPanel #plan70Code{min-width:145px;flex:2 1 160px}
 #plan70ServerPanel .plan70-controls{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:8px 0}
 #plan71Master{border-top:1px solid #cfdfef;margin-top:12px;padding-top:9px}
-#plan71Master[hidden]{display:none!important}
+#plan71Master[hidden],#plan74Registration[hidden],#plan74ServerManagement[hidden],#plan74ComputerName[hidden],#plan74Heading[hidden],#plan74ServerHint[hidden],#plan72TopBackup[hidden]{display:none!important}
 #plan71Master h4{margin:4px 0 7px;color:#153b63;font-size:13px}
 #plan71Master button,#plan71Master select{font-size:11px;border-radius:4px;border:1px solid #a7c6e8;background:#fff;color:#125c9f;padding:5px 7px;cursor:pointer}
 #plan71Master label{font-size:11px;font-weight:700}
@@ -7265,13 +7265,16 @@ plan66InitializeStorage();
  const ENDPOINT='https://script.google.com/macros/s/AKfycbxtaG1jP-Ph0s7QUkLrk7LYjQCQQFoEWuybyi3_6fmWt6TbhvT__8-1TgYof4aotLG-/exec';
  const DEVICE_KEY='safeplan_server_device_v1';
  const panel=document.createElement('section');panel.id='plan70ServerPanel';
- panel.innerHTML=`<h3>서버 백업 · 기기등록</h3>
+ panel.innerHTML=`<h3 id="plan74Heading">서버 백업 · 기기등록</h3>
  <p id="plan71MasterHint" class="plan70-hint" hidden>처음 마스터 등록은 Apps Script 편집기에서 <code>createMasterRegistrationCode</code>를 한 번 실행합니다. 그다음부터 일반 기기는 마스터가 발급한 16자리 일회용 코드로 등록합니다.</p>
  <p id="plan71UserHint" class="plan70-hint">관리자에게 받은 등록코드를 입력해 기기를 등록하세요.</p>
- <div class="plan70-code-row"><input type="text" id="plan70Label" autocomplete="off" maxlength="60" placeholder="기기 표시 이름 (예: 현장 PC)"><input type="text" id="plan70Code" autocomplete="off" maxlength="19" placeholder="10분 유효 등록코드"><button class="btn" type="button" id="plan70Register">기기 등록</button></div>
+ <div id="plan74Registration" class="plan70-code-row"><input type="text" id="plan70Label" autocomplete="off" maxlength="60" placeholder="기기 표시 이름 (예: 현장 PC)"><input type="text" id="plan70Code" autocomplete="off" maxlength="19" placeholder="10분 유효 등록코드"><button class="btn" type="button" id="plan70Register">기기 등록</button></div>
+ <div id="plan74ComputerName" hidden></div>
+ <div id="plan74ServerManagement" hidden>
  <div class="plan70-controls"><button type="button" id="plan70Check">기기 권한 확인</button><button type="button" id="plan70Backup">서버 백업</button><button type="button" id="plan70List">백업 목록</button><button type="button" id="plan70Restore">서버 백업 불러오기</button><button type="button" id="plan70Verify">선택 백업 시험 복원 검증</button></div>
  <select aria-label="서버 백업 목록" id="plan70Backups"><option value="">완료된 서버 백업을 조회하세요</option></select>
  <div role="status" id="plan70Status"></div>
+ </div>
  <div id="plan71Master" hidden>
    <h4>마스터 · 기기별 권한 관리</h4>
    <div class="plan70-controls"><label for="plan71NewRole">신규 기기 권한</label><select id="plan71NewRole"><option value="editor">서버 백업·조회</option><option value="viewer">서버 조회 전용</option></select><button id="plan71Issue" type="button">1회용 등록코드 발급</button><button id="plan71Reload" type="button">등록기기 조회</button></div>
@@ -7279,17 +7282,27 @@ plan66InitializeStorage();
    <div id="plan71DeviceList" class="plan71-list"></div>
    <p class="plan70-hint">기기 사용중지를 선택하면 서버 백업 접근이 차단됩니다. 서버에 이미 저장된 백업과 PC 폴더 자료는 지우지 않습니다. PC 로컬 파일의 열람 권한을 이 기능만으로 통제할 수는 없습니다.</p>
  </div>
- <div class="plan70-hint">로컬 저장 폴더와 서버 백업은 별개입니다. 서버 기기등록용 토큰만 브라우저에 보관합니다. 백업은 사용자가 누를 때만 실행되고, 시험 복원 검증은 저장된 자료를 바꾸지 않습니다.</div>`;
+ <div id="plan74ServerHint" class="plan70-hint">로컬 저장 폴더와 서버 백업은 별개입니다. 서버 기기등록용 토큰만 브라우저에 보관합니다. 백업은 사용자가 누를 때만 실행되고, 시험 복원 검증은 저장된 자료를 바꾸지 않습니다.</div>`;
  const settings=document.getElementById('planDataPane_settings');
  if(settings)settings.prepend(panel);else document.getElementById('planInputPanel')?.append(panel);
  const $70=id=>document.getElementById(id);let busy=false;
  const topSave=[...document.querySelectorAll('button')].find(b=>(b.getAttribute('onclick')||'').includes('saveCurrentIntoPlanFolder'));
- const topBackup=document.createElement('button');topBackup.type='button';topBackup.id='plan72TopBackup';topBackup.className=topSave?.className||'btn';topBackup.textContent='서버 백업';
+ const topBackup=document.createElement('button');topBackup.type='button';topBackup.id='plan72TopBackup';topBackup.className=topSave?.className||'btn';topBackup.textContent='서버 백업';topBackup.hidden=true;
  if(topSave)topSave.before(topBackup);
  topBackup.onclick=()=>{if(!busy)$70('plan70Backup').click()};
  let confirmedRole=null;
  const roleName=role=>role==='master'?'마스터':role==='viewer'?'서버 조회 전용':'서버 백업·조회';
- function markRole(role){confirmedRole=role;$70('plan71Master').hidden=role!=='master';$70('plan71MasterHint').hidden=role!=='master';$70('plan71UserHint').hidden=role==='master';$70('plan70Backup').disabled=busy||role==='viewer';topBackup.disabled=busy||role==='viewer';}
+ function markRole(role,label){
+  confirmedRole=role;const master=role==='master',registered=['master','editor','viewer'].includes(role);
+  $70('plan71Master').hidden=!master;$70('plan71MasterHint').hidden=!master;
+  $70('plan74ServerManagement').hidden=!master;$70('plan74ServerHint').hidden=!master;topBackup.hidden=!master;
+  $70('plan74Heading').hidden=registered&&!master;
+  $70('plan74Registration').hidden=registered&&!master;$70('plan71UserHint').hidden=registered;
+  $70('plan74ComputerName').hidden=!registered||master;
+  const c=credentials();$70('plan74ComputerName').textContent=label||c?.deviceLabel||'이름 미등록 기기';
+  $70('plan70Backup').disabled=busy||role==='viewer';topBackup.disabled=busy||role==='viewer';
+  if(registered&&label&&c&&c.deviceLabel!==label){try{localStorage.setItem(DEVICE_KEY,JSON.stringify({...c,deviceLabel:label}))}catch(e){console.warn('기기 이름 보관 실패',e)}}
+ }
 
  function status(message){$70('plan70Status').textContent=message}
  function credentials(){try{const obj=JSON.parse(localStorage.getItem(DEVICE_KEY)||'null');return obj&&obj.deviceId&&obj.deviceToken?obj:null}catch(_){return null}}
@@ -7319,21 +7332,21 @@ plan66InitializeStorage();
  }
  function authorized(action,more={}){const c=credentials();if(!c)throw Error('먼저 등록코드를 입력하여 기기를 등록하세요.');return serverRequest(action,{deviceId:c.deviceId,deviceToken:c.deviceToken,...more})}
  async function checkAccess(){const c=credentials();if(!c){markRole(null);status('미등록 기기 · 마스터에게 등록코드를 요청하세요.');return null;}
-  try{const r=await authorized('ping');markRole(r.role);status('등록 기기 확인 완료 · '+r.userName+' · '+roleName(r.role));return r;}
+  try{const r=await authorized('ping');markRole(r.role,r.deviceLabel);status('등록 기기 확인 완료 · '+r.userName+' · '+roleName(r.role));return r;}
   catch(e){markRole(null);status('서버 기기인증 실패: '+e.message+' · 관리자에게 문의하세요.');return null;}}
 
  async function run(message,callback){if(busy)return;busy=true;topBackup.disabled=true;panel.querySelectorAll('button').forEach(b=>b.disabled=true);status(message);
   try{await callback()}catch(e){console.error('서버 백업 작업 오류',e);status('실패: '+e.message);alert('서버 백업 오류: '+e.message)}finally{busy=false;panel.querySelectorAll('button').forEach(b=>b.disabled=false);markRole(confirmedRole)}
  }
- const c=credentials();status(c?'기기 인증 확인 중…':'기기 미등록 · 마스터에게 16자리 등록코드를 요청하세요.');if(c)checkAccess();
+ const c=credentials();status(c?'기기 인증 확인 중…':'기기 미등록 · 마스터에게 16자리 등록코드를 요청하세요.');if(c){$70('plan74Registration').hidden=true;$70('plan71UserHint').hidden=true;$70('plan74Heading').hidden=true;$70('plan74ComputerName').hidden=false;$70('plan74ComputerName').textContent=c.deviceLabel||'기기 확인 중…';checkAccess()}
  $70('plan70Register').onclick=()=>run('등록코드 확인 중…',async()=>{
   if(credentials()&&!confirm('이 HTML에 이미 등록된 기기가 있습니다. 새 기기로 다시 등록할까요? 기존 등록정보를 바꾸려는 경우에만 확인하세요.'))return;
   const code=$70('plan70Code').value.replace(/\s/g,'').toUpperCase();if(!/^[A-F0-9]{16}$/.test(code))throw Error('관리자에게 받은 16자리 등록코드를 입력하세요.');
   const id='d_'+randomHex(12),label=$70('plan70Label').value.trim()||('브라우저 / '+new Date().toLocaleDateString('ko-KR'));
   const result=await serverRequest('registerDevice',{deviceId:id,deviceLabel:label,registrationCode:code});
-  const record={deviceId:result.deviceId,deviceToken:result.deviceToken,userId:result.userId,userName:result.userName};
+  const record={deviceId:result.deviceId,deviceToken:result.deviceToken,userId:result.userId,userName:result.userName,deviceLabel:result.deviceLabel||label};
   try{localStorage.setItem(DEVICE_KEY,JSON.stringify(record))}catch(e){throw Error('기기 등록 성공 후 브라우저에 저장하지 못했습니다. 새 등록코드를 발급받아야 할 수 있습니다.')}
-  $70('plan70Code').value='';markRole(result.role);status('기기 등록 완료 · '+result.userName+' · '+roleName(result.role)+'\n등록 토큰만 현재 브라우저에 보관합니다.');
+  $70('plan70Code').value='';markRole(result.role,result.deviceLabel||label);status('기기 등록 완료 · '+result.userName+' · '+roleName(result.role)+'\n등록 토큰만 현재 브라우저에 보관합니다.');
  });
  $70('plan70Check').onclick=()=>run('기기 권한 확인 중…',async()=>{await checkAccess()});
  async function deviceList(){const r=await authorized('adminListDevices');const wrap=$70('plan71DeviceList');wrap.replaceChildren();
@@ -7376,53 +7389,35 @@ plan66InitializeStorage();
  }
  $70('plan70List').onclick=()=>run('백업 목록 조회 중…',async()=>{const count=await listBackups();status('완료된 백업 '+count+'개 조회 · 최신 50개까지 표시')});
  const hexBuffer=buf=>Array.from(new Uint8Array(buf),b=>b.toString(16).padStart(2,'0')).join('');
+ function downloadBackup(params){return new Promise((resolve,reject)=>{
+  const callback='plan74cb_'+randomHex(7),script=document.createElement('script');let finished=false;
+  const done=(error,result)=>{if(finished)return;finished=true;clearTimeout(timer);script.remove();delete window[callback];if(error)reject(error);else if(!result?.ok)reject(Error(result?.error||'다운로드 거부'));else resolve(result)};
+  window[callback]=result=>done(null,result);
+  const timer=setTimeout(()=>done(Error('다운로드 응답 시간 초과 · 다시 불러오기를 실행하세요.')),120000);
+  script.onerror=()=>done(Error('다운로드 연결 실패'));script.referrerPolicy='no-referrer';
+  const query=new URLSearchParams({action:'backupDownload',...params,callback});script.src=ENDPOINT+'?'+query.toString();document.head.append(script);
+ })}
  async function readVerifiedBackup(){
   const id=$70('plan70Backups').value;if(!id)throw Error('먼저 [백업 목록]을 누르고 검사할 백업을 선택하세요.');
-  if(!crypto.subtle)throw Error('브라우저의 보안 해시 기능을 사용할 수 없습니다.');
-  const result=await authorized('backupManifest',{backupId:id}),manifest=result.backup;
-  if(!manifest?.complete||manifest.backupId!==id)throw Error('완료되지 않은 백업입니다.');
-  const parts=['settings','registry','plans','draft'],pieces={},jobs=[];
-  let expectedBytes=0;
-  for(const part of parts){
-   const meta=manifest.parts?.[part];
-   if(!meta||!Number.isInteger(meta.chunks)||meta.chunks<1||meta.chunks>4096||!Number.isSafeInteger(meta.bytes)||meta.bytes<1)throw Error(part+' 백업 정보가 올바르지 않습니다.');
-   expectedBytes+=meta.bytes;pieces[part]=new Array(meta.chunks);
-   for(let index=0;index<meta.chunks;index++)jobs.push({part,index});
-  }
-  if(expectedBytes>12*1024*1024)throw Error('백업 자료가 서버 제한(12MiB)을 초과했습니다.');
-  let cursor=0,completed=0,receivedBytes=0,failure=null;
-  const progress=()=>status('서버 백업 받는 중 · '+Math.floor(receivedBytes/expectedBytes*100)+'% · '+completed+'/'+jobs.length+' 조각\n'+(receivedBytes/1048576).toFixed(2)+' / '+(expectedBytes/1048576).toFixed(2)+' MiB · 최대 4개 동시 수신 · 로컬 변경 없음');
-  progress();
-  async function worker(){
-   while(!failure&&cursor<jobs.length){
-    const {part,index}=jobs[cursor++];
-    try{
-     const r=await authorized('backupReadChunk',{backupId:id,part,index});
-     if(failure)return;
-     if(r.backupId!==id||r.part!==part||r.index!==index||typeof r.chunk!=='string')throw Error('백업 조각 정보 불일치');
-     const binary=atob(r.chunk),buf=new Uint8Array(binary.length);
-     for(let j=0;j<binary.length;j++)buf[j]=binary.charCodeAt(j);
-     pieces[part][index]=buf;receivedBytes+=buf.length;completed++;
-     if(receivedBytes>expectedBytes)throw Error('백업 바이트 길이 초과');
-     progress();
-    }catch(e){if(!failure)failure=e;}
-   }
-  }
-  // Wait for every in-flight request before releasing the operation lock, including on failure.
-  await Promise.all(Array.from({length:Math.min(4,jobs.length)},()=>worker()));
-  if(failure)throw failure;
+  if(!crypto.subtle)throw Error('브라우저 보안 검증 기능을 사용할 수 없습니다.');
+  const c=credentials();if(!c)throw Error('등록 기기 인증이 필요합니다.');
+  const encoder=new TextEncoder(),tokenHash=hexBuffer(await crypto.subtle.digest('SHA-256',encoder.encode(c.deviceToken)));
+  const signingKey=await crypto.subtle.importKey('raw',encoder.encode(tokenHash),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  const nonce=randomHex(16),timestamp=String(Date.now()),message=['backupDownload',c.deviceId,id,nonce,timestamp].join('|');
+  const signature=hexBuffer(await crypto.subtle.sign('HMAC',signingKey,encoder.encode(message)));
+  status('서버 백업 받는 중…');
+  const result=await downloadBackup({deviceId:c.deviceId,backupId:id,nonce,timestamp,signature});
+  if(result.backupId!==id||result.nonce!==nonce||!Number.isSafeInteger(result.totalBytes)||result.totalBytes<1||result.totalBytes>12*1048576)throw Error('서버 다운로드 정보 오류 · 서버 배포 버전을 확인하세요.');
+  status('서버 백업 검증 중…');
   const restored={};let sum=0;
-  for(const part of parts){
-   const meta=manifest.parts[part],total=pieces[part].reduce((n,b)=>n+b.length,0);
-   if(total!==meta.bytes)throw Error(part+' 바이트 길이 불일치');
-   status('다운로드 완료 · '+part+' 무결성 검증 중 (로컬 변경 없음)');
-   const bytes=new Uint8Array(total);let offset=0;
-   for(const piece of pieces[part]){bytes.set(piece,offset);offset+=piece.length}
-   const hash=hexBuffer(await crypto.subtle.digest('SHA-256',bytes));
-   if(hash!==meta.sha256)throw Error(part+' 무결성 검증 실패');
-   restored[part]=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));sum+=total;
-   delete pieces[part];
+  for(const part of ['settings','registry','plans','draft']){
+   const meta=result.parts?.[part];if(!meta||typeof meta.text!=='string'||!Number.isSafeInteger(meta.bytes)||meta.bytes<1||!/^[a-f0-9]{64}$/.test(meta.sha256))throw Error('백업 항목 정보 오류: '+part);
+   const bytes=encoder.encode(meta.text);sum+=bytes.length;
+   if(bytes.length!==meta.bytes||sum>result.totalBytes)throw Error(part+' 바이트 길이 불일치');
+   if(hexBuffer(await crypto.subtle.digest('SHA-256',bytes))!==meta.sha256)throw Error(part+' 무결성 검증 실패');
+   restored[part]=JSON.parse(meta.text);delete result.parts[part];
   }
+  if(sum!==result.totalBytes)throw Error('백업 전체 길이 불일치');
   if(!restored.plans?.documents||!Array.isArray(restored.registry?.persons)||!Array.isArray(restored.registry?.equipment)||!Array.isArray(restored.registry?.cargo))throw Error('복원 자료 형식이 올바르지 않습니다.');
   return {id,restored,sum};
  }
