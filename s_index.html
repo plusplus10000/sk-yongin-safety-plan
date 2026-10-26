@@ -601,13 +601,13 @@ body.plan-dragging{cursor:col-resize!important;user-select:none!important}
 #planInputPanel #planDataPane_search{padding:4px!important}
 #planInputPanel #plan45Search.plan48-search{display:grid;gap:5px;padding:5px!important;border:0!important;background:transparent!important;margin:0 0 5px!important}
 #planInputPanel .plan48-search-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;align-items:end}
-#planInputPanel .plan48-search-second{grid-template-columns:minmax(115px,1.2fr) minmax(170px,1.5fr) auto auto}
+#planInputPanel .plan48-search-second{grid-template-columns:minmax(115px,1.2fr) minmax(170px,1.5fr) auto}
 #planInputPanel .plan48-search-field{display:flex;flex-direction:column;gap:2px;font-size:11px;font-weight:700;color:#395774;min-width:0}
 #planInputPanel .plan48-search-field input,#planInputPanel .plan48-search-field select{width:100%;max-width:100%;height:27px;min-height:27px;border:1px solid #b5cbe3;border-radius:4px;background:#fff;padding:3px 5px;font-size:11px;color:#183d61}
 #planInputPanel .plan48-dates{display:flex;gap:3px;align-items:center;min-width:0}
 #planInputPanel .plan48-dates input{min-width:0;flex:1 1 0}
 #planInputPanel .plan48-dates input{font-size:10px!important;padding:2px 1px!important}
-#planInputPanel .plan48-search-second>.btn{height:27px;min-height:27px;padding:3px 9px!important;margin:0;white-space:nowrap;font-size:11px!important}
+#planInputPanel .plan48-search-second .plan76-search-actions>.btn{height:27px;min-height:27px;padding:3px 9px!important;margin:0;white-space:nowrap;font-size:11px!important}
 #planInputPanel .plan48-open-date{font-size:11px;color:#006fdf;font-weight:800;background:none;border:none;text-decoration:underline;cursor:pointer;white-space:nowrap;padding:0}
 #planInputPanel .plan48-open-date:hover{color:#f28c18}
 #planInputPanel .plan48-delete-doc{padding:2px 4px!important;min-height:21px!important;font-size:10px!important;line-height:1.1!important;color:#bc3044!important}
@@ -5615,7 +5615,7 @@ if(searchPane){
   const syncSelects=()=>{
     const types=[...new Set([...(masters.equipment||[]).filter(x=>!x.archived).map(x=>x.name||x.type||''),...String(store.plan13MasterValues?.equipmentTypes||'').split(/\s*\/\s*/)].map(x=>String(x).trim()).filter(Boolean))];
     opts(equip,types.map(t=>[t,t]),'전체 기종');
-    const locations=[...new Set([...getLocations(),...Object.values(store.documents||{}).flatMap(doc=>[...(doc?.regions?.map(r=>r.location||'')||[]),doc?.plan23CellEdits?.['2:C5']||'']).flatMap(s=>String(s).split(/\s+\/\s+/).map(x=>x.trim()).filter(Boolean))])];
+    const locations=[...new Set([...getLocations(),...Object.values({...store.documents,...Object.fromEntries(Object.entries(store.planTrashDocuments||{}).map(([id,v])=>[id,v.document]))}).filter(Boolean).flatMap(doc=>[...(doc?.regions?.map(r=>r.location||'')||[]),doc?.plan23CellEdits?.['2:C5']||'']).flatMap(s=>String(s).split(/\s+\/\s+/).map(x=>x.trim()).filter(Boolean))])];
     opts(loc,locations.map(t=>[t,t]),'전체 작업위치');
   };
   const field=(label,input,cls='')=>{const el=make('label','plan48-search-field '+cls);el.append(make('span','',label),input);return el};
@@ -5623,12 +5623,16 @@ if(searchPane){
   const dateWrap=make('div','plan48-dates');dateWrap.append(from,make('span','','~'),to);
   const refresh=make('button','btn','새로고침');refresh.type='button';refresh.id='plan48Refresh';
   const apply=make('button','btn primary','검색');apply.type='button';apply.id='plan45Apply';
-  row2.append(field('검색어',keyword),field('기간',dateWrap),refresh,apply);
+  const searchActions=make('div','plan76-search-actions');searchActions.append(refresh,apply);
+  row2.append(field('검색어',keyword),field('기간',dateWrap),searchActions);
   ctrl.append(row1,row2);
   const header=searchPane.querySelector('.plan18-list-head');if(header)header.style.display='none';
   const meta=searchPane.querySelector(':scope > .plan18-meta');if(meta)meta.style.display='none';
   searchPane.prepend(ctrl);syncSelects();
   let active={equipment:'',loc:'',keyword:'',from:'',to:''},searchPage=0;
+  const selectedPlans=new Set(),selectedTrash=new Set();
+  const selection=()=>window.plan76TrashMode?selectedTrash:selectedPlans;
+  window.plan76ChangeListMode=()=>{selectedPlans.clear();selectedTrash.clear();runSearch()};
   const SEARCH_PAGE_SIZE=30;
   const getEq=doc=>(doc.equipment||[]).map(id=>(masters.equipment||[]).find(x=>x.id===id)).filter(Boolean);
   const getLoc=doc=>{
@@ -5639,10 +5643,10 @@ if(searchPane){
     return [...new Set(sources.map(s=>String(s??'').trim()).filter(Boolean))];
   };
   const fromSearch=()=>({equipment:equip.value,loc:loc.value,keyword:keyword.value.trim(),from:from.value,to:to.value});
-  const runSearch=()=>{active=fromSearch();searchPage=0;plan18RenderDocuments('search')};
+  const runSearch=()=>{selectedPlans.clear();selectedTrash.clear();active=fromSearch();searchPage=0;plan18RenderDocuments('search')};
   apply.onclick=runSearch;keyword.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}});
   refresh.onclick=()=>{syncSelects();runSearch();toast('저장된 문서 목록을 새로고침했습니다.')};
-  plan18DocumentRows=function(){return Object.entries(store.documents||{}).filter(([id,doc])=>{
+  plan18DocumentRows=function(){const source=window.plan76TrashMode?Object.fromEntries(Object.entries(store.planTrashDocuments||{}).map(([id,v])=>[id,v.document])):(store.documents||{});return Object.entries(source).filter(([id,doc])=>{
     if(!doc||typeof doc!=='object')return false;
     const date=String(doc.writtenDate||'');if(active.from&&date<active.from)return false;if(active.to&&date>active.to)return false;
     const equipment=getEq(doc),locs=getLoc(doc);
@@ -5656,21 +5660,50 @@ if(searchPane){
     if(kind!=='search')return priorRender(kind);
     const rows=plan18DocumentRows(),box=searchPane.querySelector('.plan18-results');if(!box)return;
     box.replaceChildren();box.classList.add('plan45-results');
+    const trash=!!window.plan76TrashMode,selected=selection(),allowed=new Set(rows.map(([id])=>id));
+    for(const id of selected)if(!allowed.has(id))selected.delete(id);
+    const toolbar=make('div','plan76-bulk-controls');
+    toolbar.append(make('strong','',trash?'삭제 계획서 검색 결과':'계획서 검색 결과'));
+    const count=make('span','');
+    const all=make('input');all.type='checkbox';all.id='plan76SelectAll';all.setAttribute('aria-label','현재 검색 결과 전체선택');
+    const allLabel=make('label','');allLabel.append(all,document.createTextNode(' 전체선택'));
+    const clear=make('button','btn','선택해제');clear.type='button';
+    const actionButtons=[];
+    const updateSelection=()=>{
+     count.textContent='선택 '+selected.size+' / 검색 '+rows.length+'건';
+     all.checked=rows.length>0&&selected.size===rows.length;all.indeterminate=selected.size>0&&selected.size<rows.length;
+     all.disabled=!rows.length;for(const b of actionButtons)b.disabled=!selected.size;
+     box.querySelectorAll('input[data-plan-select]').forEach(c=>c.checked=selected.has(c.dataset.planSelect));
+    };
+    all.onchange=()=>{selected.clear();if(all.checked)rows.forEach(([id])=>selected.add(id));updateSelection()};
+    clear.onclick=()=>{selected.clear();updateSelection()};toolbar.append(allLabel,clear,count);
+    for(const [label,action] of (trash?[['선택 복원','restore'],['선택 완전삭제','purge']]:[['선택 삭제','delete']])){
+     const b=make('button','btn'+(action==='restore'?'':' danger'),label);b.type='button';b.dataset.bulkAction=action;actionButtons.push(b);
+     b.onclick=async()=>{const ids=[...selected];toolbar.querySelectorAll('button,input').forEach(x=>x.disabled=true);try{if(await window.plan76BulkAction(ids,action))selected.clear()}finally{plan18RenderDocuments('search')}};toolbar.append(b);
+    }
+    box.append(toolbar);updateSelection();
+
     if(!rows.length){searchPage=0;box.append(make('div','plan18-empty','검색 조건에 맞는 계획서가 없습니다.'));return}
     const wrap=make('div','plan45-table-wrap'),table=make('table','plan45-table');
-    const thead=make('thead'),thRow=make('tr');['관리','문서번호','작성일(수정일)','제목','업체','기종','모델명','성능','자격·면허','반입일','작업위치','최종 저장'].forEach(x=>thRow.append(make('th','',x)));thead.append(thRow);table.append(thead);
+    const thead=make('thead'),thRow=make('tr');['선택','관리','문서번호','작성일(수정일)','제목','업체','기종','모델명','성능','자격·면허','반입일','작업위치',trash?'삭제일':'최종 저장'].forEach(x=>thRow.append(make('th','',x)));thead.append(thRow);table.append(thead);
     const body=make('tbody');
     const pageCount=Math.max(1,Math.ceil(rows.length/SEARCH_PAGE_SIZE));
     searchPage=Math.min(searchPage,pageCount-1);
     for(const [id,doc] of rows.slice(searchPage*SEARCH_PAGE_SIZE,(searchPage+1)*SEARCH_PAGE_SIZE)){
-      const tr=make('tr');if(data.id===id)tr.classList.add('plan45-current');
-      const eq=getEq(doc);const cells=[id,doc.company||'',eq.map(x=>x.name||x.type||'').join(' / '),eq.map(x=>x.model||'').join(' / '),eq.map(x=>x.performance||x.spec||'').join(' / '),eq.map(x=>planEquipmentLicenseValue(x)).join(' / '),eq.map(x=>x.intake||x.arrivalDate||'').join(' / '),getLoc(doc).join(' / '),doc.updatedAt?new Date(doc.updatedAt).toLocaleString('ko-KR'):''];
-      const delTd=make('td','plan69-doc-manage');const del=make('button','btn danger plan48-delete-doc','삭제');del.type='button';del.title='선택한 문서 삭제';del.onclick=()=>window.plan48RemoveDocument(id);const copy=make('button','btn plan69-copy-btn','복사');copy.type='button';copy.title='기존 원본을 보존하고 새 문서번호로 복사';copy.onclick=()=>window.plan69CopyDocument(id);delTd.append(del,copy);tr.append(delTd);
-      const openTd=make('td');const open=make('button','plan48-open-date',id);open.type='button';open.title='문서번호 클릭하여 계획서 열기';open.onclick=()=>plan18OpenDocument(id);openTd.append(open);tr.append(openTd);
+      const tr=make('tr');tr.dataset.documentId=id;if(!trash&&data.id===id)tr.classList.add('plan45-current');
+      const selectTd=make('td'),check=make('input');check.type='checkbox';check.dataset.planSelect=id;check.setAttribute('aria-label',id+' 선택');check.checked=selected.has(id);check.onchange=()=>{if(check.checked)selected.add(id);else selected.delete(id);updateSelection()};selectTd.append(check);tr.append(selectTd);
+      const eq=getEq(doc);const cells=[id,doc.company||'',eq.map(x=>x.name||x.type||'').join(' / '),eq.map(x=>x.model||'').join(' / '),eq.map(x=>x.performance||x.spec||'').join(' / '),eq.map(x=>planEquipmentLicenseValue(x)).join(' / '),eq.map(x=>x.intake||x.arrivalDate||'').join(' / '),getLoc(doc).join(' / '),(trash?store.planTrashDocuments[id]?.deletedAt:doc.updatedAt)?new Date(trash?store.planTrashDocuments[id].deletedAt:doc.updatedAt).toLocaleString('ko-KR'):''];
+      const delTd=make('td','plan69-doc-manage');
+      for(const [label,action] of (trash?[['복원',()=>window.plan75RestoreDocument(id)],['완전삭제',()=>window.plan75PurgeDocument(id)]]:[['삭제',()=>window.plan48RemoveDocument(id)],['복사',()=>window.plan69CopyDocument(id)]])){
+       const b=make('button','btn'+(label.includes('삭제')?' danger plan48-delete-doc':label==='복사'?' plan69-copy-btn':''),label);b.type='button';b.onclick=async()=>{await action();plan18RenderDocuments('search')};delTd.append(b);
+      }tr.append(delTd);
+      const openTd=make('td');if(trash){openTd.textContent=id}else{const open=make('button','plan48-open-date',id);open.type='button';open.title='문서번호 클릭하여 계획서 열기';open.onclick=()=>plan18OpenDocument(id);openTd.append(open)}tr.append(openTd);
+
       const modified=doc.updatedAt?new Date(doc.updatedAt):null;
       const modifiedText=modified&&!Number.isNaN(modified.getTime())?[modified.getFullYear(),String(modified.getMonth()+1).padStart(2,'0'),String(modified.getDate()).padStart(2,'0')].join('-'):'';
       const dateTd=make('td','',(doc.writtenDate||'날짜 없음')+(modifiedText?' ('+modifiedText+')':''));tr.append(dateTd);
-      const titleTd=make('td','plan69-title-cell');const titleBtn=make('button','plan69-title-btn',doc.planTitle||'제목 입력');titleBtn.type='button';titleBtn.title='제목 클릭하여 수정';titleBtn.onclick=()=>window.plan69EditTitle(id);titleTd.append(titleBtn);tr.append(titleTd);
+      const titleTd=make('td','plan69-title-cell');if(trash){titleTd.textContent=doc.planTitle||'제목 없음'}else{const titleBtn=make('button','plan69-title-btn',doc.planTitle||'제목 입력');titleBtn.type='button';titleBtn.title='제목 클릭하여 수정';titleBtn.onclick=()=>window.plan69EditTitle(id);titleTd.append(titleBtn)}tr.append(titleTd);
+
       for(const text of cells.slice(1)){
        const td=make('td');td.title=text||'';td.textContent=text||'-';tr.append(td);
       }
@@ -7098,12 +7131,15 @@ if(settingsTree){
   }finally{planFolderPaused=wasPaused}
  });
 
- async function changePlanTrash(id,action){
+ async function changePlanTrash(ids,action){
+  ids=[...new Set(Array.isArray(ids)?ids:[ids])];if(!ids.length){alert('계획서를 선택하세요.');return false}
+  for(const id of ids){
   const entry=store.planTrashDocuments?.[id],doc=action==='delete'?store.documents?.[id]:entry?.document;
   if(!doc){alert('계획서를 찾을 수 없습니다.');return false}
   if(action==='restore'&&store.documents?.[id]){alert('같은 문서번호가 이미 있습니다. 기존 계획서를 덮어쓰지 않았습니다.');return false}
+  }
   const question=action==='delete'?'삭제 계획서 목록으로 옮길까요? 내용과 사진은 보관되며 복원할 수 있습니다.':action==='restore'?'이 계획서를 원래 문서번호와 사진으로 복원할까요?':'이 계획서를 삭제 목록에서 완전삭제할까요? 여기에서는 다시 복원할 수 없습니다. 이미 만든 로컬·서버 백업은 별도로 남습니다.';
-  if(!confirm('['+id+'] '+question))return false;
+  if(!confirm('선택한 '+ids.length+'건 · '+question))return false;
   return safeAction(action==='restore'?'계획서 복원':action==='purge'?'계획서 완전삭제':'계획서 삭제',async()=>{
    if(!await requiresFolder())return false;
    clearTimeout(planFolderTimer);await plan70WriteQueue.catch(()=>{});
@@ -7113,6 +7149,7 @@ if(settingsTree){
     await safetyCheckpoint('before-plan-'+action);
     prior=await folderFileRead(namePlans);if(prior!==null)await backupExistingFile(namePlans,prior);
     store.planTrashDocuments||={};store.planDeletedDocuments||={};
+    for(const id of ids){
     if(action==='delete'){
      const deletedAt=new Date().toISOString();
      store.planTrashDocuments[id]={document:jsonCopy(store.documents[id]),deletedAt};store.planDeletedDocuments[id]=deletedAt;
@@ -7123,6 +7160,7 @@ if(settingsTree){
      delete store.planDeletedDocuments[id];delete store.planTrashDocuments[id];
     }else{
      delete store.planTrashDocuments[id];store.planDeletedDocuments[id]=new Date().toISOString();
+    }
     }
     store.draft=jsonCopy(data);
     const text=JSON.stringify(plansCurrent(),null,2);touched=true;await folderFileWrite(namePlans,text);
@@ -7140,6 +7178,7 @@ if(settingsTree){
  window.plan48RemoveDocument=id=>trashAction(id,'delete');
  window.plan75RestoreDocument=id=>trashAction(id,'restore');
  window.plan75PurgeDocument=id=>trashAction(id,'purge');
+ window.plan76BulkAction=(ids,action)=>trashAction(ids,action);
  const origSavePlans=window.plan64SavePlans,origLoadPlans=window.plan64LoadPlans;
  window.plan64SavePlans=()=>safeAction('계획서 목록 저장',origSavePlans);
  window.plan64LoadPlans=()=>safeAction('계획서 목록 불러오기',origLoadPlans);
@@ -7422,35 +7461,20 @@ plan66InitializeStorage();
 })();
 </script>
 <style>
-#plan75TrashDialog{width:min(780px,92vw);max-height:85vh;border:1px solid #adc6dc;border-radius:8px;padding:16px;color:#173b5b}
-#plan75TrashDialog::backdrop{background:#0006}
-#plan75TrashDialog .plan75-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-#plan75TrashDialog .plan75-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 0;border-top:1px solid #dce5ed}
-#plan75TrashDialog .plan75-info{flex:1 1 200px;overflow-wrap:anywhere}
-#plan75TrashDialog small{display:block;color:#607489}
+#planInputPanel .plan76-search-actions{display:flex;align-items:end;gap:5px;flex-wrap:wrap}
+@media(max-width:600px){#planInputPanel .plan76-search-actions{grid-column:1/-1}}
+#planInputPanel .plan76-bulk-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 0;color:#174e7f}
+#planInputPanel .plan76-bulk-controls label{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+#planInputPanel .plan76-bulk-controls input,#planInputPanel .plan45-table input[data-plan-select]{width:16px;height:16px;min-height:0;cursor:pointer}
+#planInputPanel #plan75TrashButton{white-space:nowrap}
 </style>
 <script>
 (()=>{
- const search=document.querySelector('#planDataTabs [data-input-tab="search"]');if(!search)return;
- const button=document.createElement('button');button.type='button';button.className='plan-data-tab';button.id='plan75TrashButton';button.textContent='삭제 계획서 보기';button.setAttribute('aria-haspopup','dialog');search.after(button);
- const dialog=document.createElement('dialog');dialog.id='plan75TrashDialog';dialog.setAttribute('aria-labelledby','plan75TrashTitle');
- dialog.innerHTML='<div class="plan75-head"><strong id="plan75TrashTitle">삭제 계획서</strong><button type="button" class="btn" id="plan75TrashClose">닫기</button></div><p>삭제한 계획서를 복원하거나 완전삭제할 수 있습니다. 기존 백업은 별도로 남습니다.</p><div id="plan75TrashList"></div>';
- document.body.append(dialog);dialog.querySelector('#plan75TrashClose').onclick=()=>dialog.close();
- window.plan75RenderTrash=()=>{
-  const list=dialog.querySelector('#plan75TrashList');list.replaceChildren();
-  const rows=Object.entries(store.planTrashDocuments||{}).filter(([id,v])=>v?.document).sort((a,b)=>String(b[1].deletedAt).localeCompare(String(a[1].deletedAt)));
-  if(!rows.length){list.textContent='삭제된 계획서가 없습니다.';return}
-  for(const [id,item] of rows){
-   const row=document.createElement('div');row.className='plan75-row';row.dataset.documentId=id;
-   const info=document.createElement('div');info.className='plan75-info';info.textContent=id+' · '+(item.document.planTitle||'제목 없음');
-   const date=document.createElement('small');date.textContent='삭제일: '+new Date(item.deletedAt).toLocaleString('ko-KR');info.append(date);row.append(info);
-   for(const [label,action] of [['복원',window.plan75RestoreDocument],['완전삭제',window.plan75PurgeDocument]]){
-    const b=document.createElement('button');b.type='button';b.className='btn smallbtn'+(label==='완전삭제'?' danger':'');b.textContent=label;
-    b.onclick=async()=>{dialog.querySelectorAll('button').forEach(x=>x.disabled=true);try{await action(id);window.plan75RenderTrash()}finally{dialog.querySelectorAll('button').forEach(x=>x.disabled=false)}};row.append(b);
-   }list.append(row);
-  }
- };
- button.onclick=()=>{window.plan75RenderTrash();dialog.showModal()};
+ const search=document.getElementById('plan45Apply');if(!search)return;
+ const button=document.createElement('button');button.type='button';button.className='btn';button.id='plan75TrashButton';button.textContent='삭제 계획서 보기';button.setAttribute('aria-pressed','false');search.after(button);
+ window.plan76TrashMode=false;
+ button.onclick=()=>{window.plan76TrashMode=!window.plan76TrashMode;button.textContent=window.plan76TrashMode?'일반 계획서 보기':'삭제 계획서 보기';button.setAttribute('aria-pressed',String(window.plan76TrashMode));window.plan76ChangeListMode()};
+ window.plan75RenderTrash=()=>plan18RenderDocuments('search');
 })();
 </script>
 </body></html>
