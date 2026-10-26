@@ -6701,7 +6701,7 @@ if(settingsTree){
      const status=$60('plan17SettingsStatus');if(status)status.textContent='전체 설정 불러오기 완료';toast('전체 설정 불러오기 완료');return true;
    }catch(e){plan17ApplyReferenceSnapshot(oldSettings);data.customSettingsValues=oldDocSettings;for(const key of ['persons','equipment','cargo'])masters[key]=oldMasters[key];renderSettingNavigation();throw e}
   })};
- // Document save covers the current document; top folder buttons cover documents only. Settings use their own controls.
+ // Save the current document, then commit the document archive (including embedded photos) to the selected folder.
  saveDocument=function(){return busyRun('계획서 저장 중',async()=>{
    if(!data.writtenDate){alert('작성일을 입력해 주세요.');return false}
    const previous=structuredClone(data),priorDocId=store.currentId;
@@ -6709,8 +6709,21 @@ if(settingsTree){
    if(plan68Changed())data.updatedAt=new Date().toISOString();const existed=Object.hasOwn(store.documents,data.id)?structuredClone(store.documents[data.id]):null;
    store.documents[data.id]=structuredClone(data);plan68Remember();store.currentId=data.id;
    try {await backupCurrent('active')}catch(e){data=previous;store.currentId=priorDocId;if(existed)store.documents[previous.id]=existed;else delete store.documents[data.id];alert('안전 저장이 실패하여 계획서 저장을 취소했습니다: '+e.message);return false}
-   if(!persist()||!await plan66FlushPersistence())return false;const el=$60('saveStatus');if(el)el.textContent='브라우저 저장 완료 · 폴더 저장은 별도';
-   $60('statusChip').textContent='저장됨';updateSummary();plan18RenderAllDocuments();toast('계획서 저장 완료');return true;
+   if(!persist()||!await plan66FlushPersistence())return false;
+   updateSummary();plan18RenderAllDocuments();
+   const el=$60('saveStatus');
+   try{
+    if(!await window.plan70SaveDocumentFolder()){
+     if(el)el.textContent='임시 보관됨 · 지정 폴더 저장 미완료';
+     $60('statusChip').textContent='폴더 저장 필요';return false;
+    }
+   }catch(e){
+    if(el)el.textContent='폴더 저장 실패 · 현재 자료는 임시 보관됨';
+    $60('statusChip').textContent='폴더 저장 실패';
+    alert('지정 폴더에 계획서를 저장하지 못했습니다. 사진과 작성 내용은 현재 화면과 브라우저 임시 보관소에 유지됩니다.\n폴더 권한과 저장 공간을 확인한 후 다시 [계획서 저장]을 눌러 주세요.\n'+e.message);return false;
+   }
+   if(el)el.textContent='지정 폴더 저장·사진 확인 완료';
+   $60('statusChip').textContent='폴더 저장됨';toast('계획서·사진 지정 폴더 저장 완료');return true;
   })};
  // Click only the model/type source. All derived equipment values are inert.
  const lockedCells=new Set(['1:D20','1:F20','1:J21','1:J22','1:K27','1:D22']);
@@ -6846,6 +6859,7 @@ if(settingsTree){
   let key=`${stem}_복구백업_${date}`;let n=1;
   while(await folderFileRead(key+'.json')!==null)key=`${stem}_복구백업_${date}_${n++}`;
   await folderFileWrite(key+'.json',oldText);
+  if(await folderFileRead(key+'.json')!==oldText)throw Error('기존 파일의 복구백업을 확인하지 못해 저장을 중단했습니다.');
  }
  async function requiresFolder(){
   if(!planFolderHandle){alert('설정에서 저장 폴더를 먼저 지정해 주세요.');return false}
@@ -6945,6 +6959,53 @@ if(settingsTree){
  };
  // Auto browser draft save continues. Automatic folder writes are limited to documents after an explicit plans-save handshake.
  let planOnlyAutosave=false;
+ async function plan70CleanRecovery(folder){
+  // Only this application's dated recovery copies; never originals or separate backups.
+  if(typeof folder.entries!=='function'||typeof folder.removeEntry!=='function')return;
+  const now=new Date(),cutoff=new Date(now);
+  const day=cutoff.getUTCDate();cutoff.setUTCDate(1);cutoff.setUTCMonth(cutoff.getUTCMonth()-1);
+  const last=new Date(Date.UTC(cutoff.getUTCFullYear(),cutoff.getUTCMonth()+1,0)).getUTCDate();
+  cutoff.setUTCDate(Math.min(day,last));
+  const pattern=/^안전작업계획서_(?:전체데이터|계획서목록|기준설정)_복구백업_(\d{14})(?:_[1-9]\d*)?\.json$/;
+  try{
+   for await(const [name,entry] of folder.entries()){
+    if(folder!==planFolderHandle)return;
+    const match=pattern.exec(name);if(!match||entry.kind!=='file')continue;
+    const stamp=match[1];
+    const date=new Date(stamp.slice(0,4)+'-'+stamp.slice(4,6)+'-'+stamp.slice(6,8)+'T'+stamp.slice(8,10)+':'+stamp.slice(10,12)+':'+stamp.slice(12,14)+'Z');
+    if(!Number.isFinite(date.getTime())||date.toISOString().replace(/[-:TZ.]/g,'').slice(0,14)!==stamp||date>=cutoff)continue;
+    await folder.removeEntry(name);
+   }
+  }catch(e){console.warn('오래된 복구백업 정리 보류:',e);toast('계획서는 저장됨 · 오래된 복구백업 정리는 다음 저장 때 다시 시도합니다.')}
+ }
+ let plan70WriteQueue=Promise.resolve();
+ function plan70WritePlans(snapshot,keepBackup=false){
+  const folder=planFolderHandle;
+  const value=JSON.stringify(snapshot,null,2);
+  const job=plan70WriteQueue.catch(()=>{}).then(async()=>{
+   if(folder!==planFolderHandle)throw Error('저장 폴더가 변경되었습니다. 다시 저장해 주세요.');
+   const previous=await folderFileRead(namePlans);
+   if(keepBackup&&previous!==null&&previous!==value)await backupExistingFile(namePlans,previous);
+   await folderFileWrite(namePlans,value);
+   const readBack=await folderFileRead(namePlans);
+   if(readBack!==value)throw Error('저장 파일을 다시 읽어 확인하지 못했습니다.');
+   validatePlans(JSON.parse(readBack));
+   await plan70CleanRecovery(folder);
+   return true;
+  });
+  plan70WriteQueue=job;return job;
+ }
+ window.plan70SaveDocumentFolder=async()=>{
+  if(!await requiresFolder())return false;
+  clearTimeout(planFolderTimer);
+  // A full document snapshot retains photo source bytes and their position/size/rotation.
+  const snapshot=plansCurrent();
+  if(!snapshot.store.documents[data.id])throw Error('저장할 계획서를 찾지 못했습니다.');
+  await plan70WritePlans(snapshot,true);
+  planFolderLastWrite=snapshot.savedAt;
+  planFolderState('계획서·사진 지정 폴더 저장 및 다시 읽기 확인 완료 · '+namePlans);
+  return true;
+ };
  window.plan66PlanListSync=()=>({enabled:planOnlyAutosave,filename:namePlans});
  schedulePlanFolderSync=function(){
   clearTimeout(planFolderTimer);if(!planFolderHandle||planFolderPaused||!planOnlyAutosave)return;
@@ -6956,14 +7017,15 @@ if(settingsTree){
   if(!planOnlyAutosave||!planFolderHandle||planFolderPaused)return false;
   const snapshot=plansCurrent();
   // Never write settings to the plan-only archive. Never delete archived document files.
-  await folderFileWrite(namePlans,JSON.stringify(snapshot,null,2));
+  await plan70WritePlans(snapshot);
   planFolderLastWrite=snapshot.savedAt;planFolderState('계획서 목록 자동 저장 완료');return true;
  };
  // Search-list plans: independent from settings, containing ALL saved documents visible in search (not just the current sheet).
  window.plan64SavePlans=()=>{return (async()=>{
   if(!await requiresFolder())return false;
-  const done=await safeWrite(namePlans,plansCurrent(),'계획서 목록');
-  if(done){planOnlyAutosave=!plan65LastSaveWasSeparate;planFolderPaused=false;planFolderState(plan65LastSaveWasSeparate?'기존 목록 유지 · 새 목록 별도 백업 저장 완료':'검색 계획서 목록 저장 완료 · 설정 별도 보호');toast('계획서 목록 저장 완료')}
+  clearTimeout(planFolderTimer);
+  const done=await plan70WritePlans(plansCurrent(),true);
+  if(done){planOnlyAutosave=true;planFolderPaused=false;planFolderState('검색 계획서 목록·사진 저장 및 다시 읽기 확인 완료 · 설정 별도 보호');toast('계획서 목록·사진 저장 완료')}
   return done;
  })().catch(e=>{console.error(e);alert('계획서 목록 저장 실패: '+e.message);return false})};
  window.plan64LoadPlans=()=>{return (async()=>{
