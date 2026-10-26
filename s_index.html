@@ -6909,12 +6909,13 @@ if(settingsTree){
  }
  function snapshotState(){return {report:jsonCopy(store),registry:jsonCopy(masters),draft:jsonCopy(data)};}
  function rollback(before){Object.keys(store).forEach(k=>delete store[k]);Object.assign(store,before.report);Object.keys(masters).forEach(k=>delete masters[k]);Object.assign(masters,before.registry);data=before.draft;fillFields();plan18RenderAllDocuments();}
- function applyPlans(snapshot){
+ function applyPlans(snapshot,{restoreBackup=false}={}){
   validatePlans(snapshot);
   // Protect current settings, registry and all the added requested features. The document archive contains ONLY plan data.
   const refs=Object.fromEntries(PLAN17_REFERENCE_FIELDS.filter(k=>Object.hasOwn(store,k)).map(k=>[k,jsonCopy(store[k])]));
   const incoming=jsonCopy(snapshot.store);
-  incoming.planDeletedDocuments={...(incoming.planDeletedDocuments||{}),...(store.planDeletedDocuments||{})};
+  // Explicit server restoration uses deletion state from that backup, not later local deletions.
+  incoming.planDeletedDocuments={...(incoming.planDeletedDocuments||{}),...(restoreBackup?{}:(store.planDeletedDocuments||{}))};
   for(const id of Object.keys(incoming.planDeletedDocuments))delete incoming.documents?.[id];
   if(incoming.planDeletedDocuments[incoming.currentId])incoming.currentId=null;
   if(incoming.draft?.id&&incoming.planDeletedDocuments[incoming.draft.id])incoming.draft=null;
@@ -7129,7 +7130,7 @@ if(settingsTree){
    for(const name of [nameCombined,namePlans,PLAN17_REFERENCE_FILE]){
     const old=await folderFileRead(name);oldFiles.set(name,old);if(old!==null)await backupExistingFile(name,old);
    }
-   applyPlans(payload);applySettings({...restored.settings,registeredMasters:restored.registry});
+   applyPlans(payload,{restoreBackup:true});applySettings({...restored.settings,registeredMasters:restored.registry});
    data=jsonCopy(restored.draft);
    if(data.id&&store.planDeletedDocuments?.[data.id])data=empty();
    store.currentId=data.id||null;store.draft=jsonCopy(data);
