@@ -7381,21 +7381,47 @@ plan66InitializeStorage();
   if(!crypto.subtle)throw Error('브라우저의 보안 해시 기능을 사용할 수 없습니다.');
   const result=await authorized('backupManifest',{backupId:id}),manifest=result.backup;
   if(!manifest?.complete||manifest.backupId!==id)throw Error('완료되지 않은 백업입니다.');
-  const restored={};let sum=0;
-  for(const part of ['settings','registry','plans','draft']){
-   const meta=manifest.parts?.[part];if(!meta||!Number.isInteger(meta.chunks)||meta.chunks<1)throw Error(part+' 백업 정보가 누락되었습니다.');
-   const pieces=[];let total=0;
-   for(let i=0;i<meta.chunks;i++){
-    status(part+' 검증: '+(i+1)+'/'+meta.chunks+' 조각 (로컬 변경 없음)');
-    const r=await authorized('backupReadChunk',{backupId:id,part,index:i});
-    if(r.backupId!==id||r.part!==part||r.index!==i)throw Error('백업 조각 정보 불일치');
-    const binary=atob(r.chunk),buf=new Uint8Array(binary.length);for(let j=0;j<binary.length;j++)buf[j]=binary.charCodeAt(j);
-    pieces.push(buf);total+=buf.length;
+  const parts=['settings','registry','plans','draft'],pieces={},jobs=[];
+  let expectedBytes=0;
+  for(const part of parts){
+   const meta=manifest.parts?.[part];
+   if(!meta||!Number.isInteger(meta.chunks)||meta.chunks<1||meta.chunks>4096||!Number.isSafeInteger(meta.bytes)||meta.bytes<1)throw Error(part+' 백업 정보가 올바르지 않습니다.');
+   expectedBytes+=meta.bytes;pieces[part]=new Array(meta.chunks);
+   for(let index=0;index<meta.chunks;index++)jobs.push({part,index});
+  }
+  if(expectedBytes>12*1024*1024)throw Error('백업 자료가 서버 제한(12MiB)을 초과했습니다.');
+  let cursor=0,completed=0,receivedBytes=0,failure=null;
+  const progress=()=>status('서버 백업 받는 중 · '+Math.floor(receivedBytes/expectedBytes*100)+'% · '+completed+'/'+jobs.length+' 조각\n'+(receivedBytes/1048576).toFixed(2)+' / '+(expectedBytes/1048576).toFixed(2)+' MiB · 최대 4개 동시 수신 · 로컬 변경 없음');
+  progress();
+  async function worker(){
+   while(!failure&&cursor<jobs.length){
+    const {part,index}=jobs[cursor++];
+    try{
+     const r=await authorized('backupReadChunk',{backupId:id,part,index});
+     if(failure)return;
+     if(r.backupId!==id||r.part!==part||r.index!==index||typeof r.chunk!=='string')throw Error('백업 조각 정보 불일치');
+     const binary=atob(r.chunk),buf=new Uint8Array(binary.length);
+     for(let j=0;j<binary.length;j++)buf[j]=binary.charCodeAt(j);
+     pieces[part][index]=buf;receivedBytes+=buf.length;completed++;
+     if(receivedBytes>expectedBytes)throw Error('백업 바이트 길이 초과');
+     progress();
+    }catch(e){if(!failure)failure=e;}
    }
+  }
+  // Wait for every in-flight request before releasing the operation lock, including on failure.
+  await Promise.all(Array.from({length:Math.min(4,jobs.length)},()=>worker()));
+  if(failure)throw failure;
+  const restored={};let sum=0;
+  for(const part of parts){
+   const meta=manifest.parts[part],total=pieces[part].reduce((n,b)=>n+b.length,0);
    if(total!==meta.bytes)throw Error(part+' 바이트 길이 불일치');
-   const bytes=new Uint8Array(total);let offset=0;for(const b of pieces){bytes.set(b,offset);offset+=b.length}
-   const hash=hexBuffer(await crypto.subtle.digest('SHA-256',bytes));if(hash!==meta.sha256)throw Error(part+' 무결성 검증 실패');
+   status('다운로드 완료 · '+part+' 무결성 검증 중 (로컬 변경 없음)');
+   const bytes=new Uint8Array(total);let offset=0;
+   for(const piece of pieces[part]){bytes.set(piece,offset);offset+=piece.length}
+   const hash=hexBuffer(await crypto.subtle.digest('SHA-256',bytes));
+   if(hash!==meta.sha256)throw Error(part+' 무결성 검증 실패');
    restored[part]=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));sum+=total;
+   delete pieces[part];
   }
   if(!restored.plans?.documents||!Array.isArray(restored.registry?.persons)||!Array.isArray(restored.registry?.equipment)||!Array.isArray(restored.registry?.cargo))throw Error('복원 자료 형식이 올바르지 않습니다.');
   return {id,restored,sum};
