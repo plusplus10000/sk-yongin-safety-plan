@@ -1,7 +1,20 @@
 <!DOCTYPE html>
 
-<html lang="ko"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
+<html lang="ko" class="safeplan-access-locked"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>안전 작업계획서 · PC 작업계획서 작성</title>
+<style id="plan73-early-access-lock">
+/* A default-deny visual gate. On a public static host this controls app UI, not source-code download. */
+html.safeplan-access-locked body > :not(#plan73AccessGate):not(#plan72Gate){visibility:hidden!important}
+html.safeplan-access-locked body > #plan72Gate[hidden]{display:none!important}
+#plan73AccessGate{position:fixed;inset:0;z-index:2147483550;background:#f0f5fb;display:flex;align-items:center;justify-content:center;padding:20px;font:14px Arial,'Noto Sans KR',sans-serif;color:#153657}
+#plan73AccessGate[hidden]{display:none!important}
+#plan73AccessGate .plan73-box{width:min(94vw,450px);background:#fff;border:1px solid #c5d6e8;border-radius:14px;box-shadow:0 12px 36px #0b29412a;padding:24px;text-align:center}
+#plan73AccessGate h2{font-size:20px;margin:0 0 12px;color:#12365f}
+#plan73AccessGate p{white-space:pre-line;line-height:1.6;color:#486177;margin:8px 0 18px}
+#plan73AccessGate button{padding:10px 18px;border:1px solid #0d70dc;border-radius:6px;background:#0c74e8;color:white;font-weight:800;cursor:pointer}
+html.safeplan-access-locked #plan72Gate:not([hidden]){z-index:2147483600!important;visibility:visible!important}
+@media print{html.safeplan-access-locked body > *{display:none!important}html.safeplan-access-locked body > #plan73AccessGate:not([hidden]){display:block!important;position:static!important}}
+</style>
 <link href="manifest.webmanifest" rel="manifest"/><meta content="#12365f" name="theme-color"/>
 <style>
 :root{--nav:#12365f;--navside:#14385f;--blue:#0878f9;--line:#dbe6f2;--bg:#f4f8fc;--text:#13233a;--muted:#66798e;--soft:#f2f7fc}
@@ -601,13 +614,13 @@ body.plan-dragging{cursor:col-resize!important;user-select:none!important}
 #planInputPanel #planDataPane_search{padding:4px!important}
 #planInputPanel #plan45Search.plan48-search{display:grid;gap:5px;padding:5px!important;border:0!important;background:transparent!important;margin:0 0 5px!important}
 #planInputPanel .plan48-search-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;align-items:end}
-#planInputPanel .plan48-search-second{grid-template-columns:minmax(115px,1.2fr) minmax(170px,1.5fr) auto}
+#planInputPanel .plan48-search-second{grid-template-columns:minmax(115px,1.2fr) minmax(170px,1.5fr) auto auto}
 #planInputPanel .plan48-search-field{display:flex;flex-direction:column;gap:2px;font-size:11px;font-weight:700;color:#395774;min-width:0}
 #planInputPanel .plan48-search-field input,#planInputPanel .plan48-search-field select{width:100%;max-width:100%;height:27px;min-height:27px;border:1px solid #b5cbe3;border-radius:4px;background:#fff;padding:3px 5px;font-size:11px;color:#183d61}
 #planInputPanel .plan48-dates{display:flex;gap:3px;align-items:center;min-width:0}
 #planInputPanel .plan48-dates input{min-width:0;flex:1 1 0}
 #planInputPanel .plan48-dates input{font-size:10px!important;padding:2px 1px!important}
-#planInputPanel .plan48-search-second .plan76-search-actions>.btn{height:27px;min-height:27px;padding:3px 9px!important;margin:0;white-space:nowrap;font-size:11px!important}
+#planInputPanel .plan48-search-second>.btn{height:27px;min-height:27px;padding:3px 9px!important;margin:0;white-space:nowrap;font-size:11px!important}
 #planInputPanel .plan48-open-date{font-size:11px;color:#006fdf;font-weight:800;background:none;border:none;text-decoration:underline;cursor:pointer;white-space:nowrap;padding:0}
 #planInputPanel .plan48-open-date:hover{color:#f28c18}
 #planInputPanel .plan48-delete-doc{padding:2px 4px!important;min-height:21px!important;font-size:10px!important;line-height:1.1!important;color:#bc3044!important}
@@ -702,7 +715,7 @@ body.plan-dragging{cursor:col-resize!important;user-select:none!important}
 #plan70ServerPanel #plan70Code{min-width:145px;flex:2 1 160px}
 #plan70ServerPanel .plan70-controls{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:8px 0}
 #plan71Master{border-top:1px solid #cfdfef;margin-top:12px;padding-top:9px}
-#plan71Master[hidden],#plan74Registration[hidden],#plan74ServerManagement[hidden],#plan74ComputerName[hidden],#plan74Heading[hidden],#plan74ServerHint[hidden],#plan72TopBackup[hidden]{display:none!important}
+#plan71Master[hidden]{display:none!important}
 #plan71Master h4{margin:4px 0 7px;color:#153b63;font-size:13px}
 #plan71Master button,#plan71Master select{font-size:11px;border-radius:4px;border:1px solid #a7c6e8;background:#fff;color:#125c9f;padding:5px 7px;cursor:pointer}
 #plan71Master label{font-size:11px;font-weight:700}
@@ -852,7 +865,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&
 const localDate=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,9);
 const empty=()=>({id:null,writtenDate:localDate(),company:'',site:'',projectType:'',equipment:[],regions:[{id:uid(),location:'',method:'',layer1:'',layer2:''}],persons:[],memo:'',createdAt:null,updatedAt:null});
-function getJSON(k,def){try{return JSON.parse(localStorage.getItem(k))||def}catch(e){return def}}
+function getJSON(k,def){if(k===KEY||k===MASTER||k==='safeWorkPlan_referenceSettings_v1')return def;try{return JSON.parse(localStorage.getItem(k))||def}catch(e){return def}}
 const store=getJSON(KEY,{documents:{},draft:null,currentId:null});
 const masters=getJSON(MASTER,{equipment:[],persons:[]});
 /* 17차: 기준설정은 문서/인력/장비 데이터와 별도 로컬 키를 사용합니다.
@@ -901,7 +914,7 @@ function plan17WriteReferenceLocal(){
  const serialized=JSON.stringify(payload);
  // 기준설정·그림삽입도 동일한 완료 확인 경로로 저장합니다.
  if(!persist())throw Error('설정 저장 요청을 보관하지 못했습니다.');
- try{localStorage.setItem(PLAN17_REFERENCE_KEY,serialized)}catch(e){console.warn('기준설정 임시저장소 쓰기 실패 · 추가 보관소에 저장 중:',e)}
+ /* plan75: settings remain in the chosen PC folder only. */
  const signature=JSON.stringify(payload.settings);if(signature!==plan17SettingsLastSerialized){plan17SettingsLastSerialized=signature;plan17ScheduleReferenceFolderSave()}
  return payload;
 }
@@ -959,7 +972,7 @@ function plan66StorageStatus(state,error){
  banner.style.background=state==='failed'?'#fff0ed':'#fff7dc';
  banner.textContent=state==='failed'?'자동 저장에 실패했습니다. 현재 창을 유지해 주세요. '+(error?.message||''):state==='loading'?'기존 저장 자료 확인 중…':'변경 내용 저장 중…';
  const status=document.getElementById('saveStatus'),chip=document.getElementById('statusChip');
- if(status)status.textContent=state==='saved'?'자동 저장 완료 · 폴더 저장은 별도':state==='failed'?'자동 저장 실패 · 현재 내용 미저장':state==='loading'?'기존 자료 확인 중':'자동 저장 중…';
+ if(status)status.textContent=state==='saved'?'지정 폴더 원본 사용 중':state==='failed'?'자동 저장 실패 · 현재 내용 미저장':state==='loading'?'기존 자료 확인 중':'자동 저장 중…';
  if(chip)chip.textContent=state==='saved'?'저장됨':state==='failed'?'미저장':'저장 중';
 }
 function plan66OpenStorage(){return new Promise((resolve,reject)=>{
@@ -1077,7 +1090,7 @@ function editPerson(id){const x=masters.persons.find(a=>a.id===id);if(!x)return;
 function editPersonRole(id,role){const x=masters.persons.find(a=>a.id===id);if(x){x.role=role;dirty();renderPersons()}}
 function togglePerson(id,on){data.persons=on?[...new Set([...data.persons,id])]:data.persons.filter(x=>x!==id);if(!on&&Object.hasOwn(data,'plan61Roles')){data.plan61Roles={...(data.plan61Roles||{}),[id]:[]}}dirty();renderPersons()}
 function updateSummary(){const hd=$('headerDate');if(hd && hd.value!==data.writtenDate)hd.value=data.writtenDate||'';const txt=$('headerDateLabel');if(txt)txt.textContent=data.writtenDate||'날짜 선택';const [a,b]=nextPeriod(data.writtenDate);$('periodStart').value=a;$('periodEnd').value=b;$('docNumber').textContent=data.id||'저장 시 자동 부여';$('sWritten').textContent=data.writtenDate||'-';$('sPeriod').textContent=a?`${a} ~ ${b}`:'-';updatePlanPeriodDisplay();$('sCompany').textContent=[data.company,data.projectType].filter(Boolean).join(' / ')||'-';$('sEquipment').textContent=`${data.equipment.length}대`;const n=data.regions.filter(r=>r.location.trim()||r.method.trim()).length;$('sArea').textContent=`${n}개`;$('sPeople').textContent=`${data.persons.length}명`}
-async function saveDocument(){if(!data.writtenDate)return alert('작성일을 입력해 주세요.');if(!data.id){const d=localDate().replace(/-/g,'');let i=1;while(store.documents[d+'-'+i])i++;data.id=d+'-'+i;data.createdAt=new Date().toISOString()}if(plan68Changed())data.updatedAt=new Date().toISOString();store.documents[data.id]=structuredClone(data);plan68Remember();if(!persist())return;let savedInFolder=false;if(planFolderHandle&&!planFolderPaused){try{savedInFolder=await flushPlanFolderSync()}catch(err){console.error(err)}}$('saveStatus').textContent=savedInFolder?'폴더 저장 완료':(planFolderHandle?'브라우저 저장 · 폴더 확인 필요':'브라우저 저장 완료');$('statusChip').textContent='저장됨';updateSummary();toast(data.id+(savedInFolder?' · 지정 폴더 저장 완료':(planFolderHandle?' · 폴더 저장 상태를 확인하세요':' · 브라우저 저장 완료 (폴더 미지정)')))}
+async function saveDocument(){if(!data.writtenDate)return alert('작성일을 입력해 주세요.');if(!data.id){const d=localDate().replace(/-/g,'');let i=1;while(store.documents[d+'-'+i])i++;data.id=d+'-'+i;data.createdAt=new Date().toISOString()}if(plan68Changed())data.updatedAt=new Date().toISOString();store.documents[data.id]=structuredClone(data);plan68Remember();if(!persist())return;let savedInFolder=false;if(planFolderHandle&&!planFolderPaused){try{savedInFolder=await flushPlanFolderSync()}catch(err){console.error(err)}}$('saveStatus').textContent=savedInFolder?'폴더 저장 완료':(planFolderHandle?'브라우저 저장 · 폴더 확인 필요':'브라우저 저장 완료');$('statusChip').textContent='저장됨';updateSummary();toast(data.id+(savedInFolder?' · 지정 폴더 저장 완료':(planFolderHandle?' · 폴더 저장 상태를 확인하세요':' · 브라우저 저장 완료 (폴더 미지정)')));return true}
 function newDocument(){if(data.id||data.equipment.length||data.persons.length||data.regions.some(x=>x.location||x.method||x.layer1||x.layer2)||data.company||data.site||data.projectType||data.memo||data.planTitle||Object.values(data.customSettingsValues||{}).some(v=>Object.values(v).some(x=>String(x).trim()))){if(!confirm('새 작업계획서를 시작할까요?\n현재 입력 내용은 화면에서 초기화됩니다.\n저장된 기존 계획서는 삭제되지 않습니다.'))return}data=empty();
  // Registered personnel and equipment remain in their masters, but NO items are selected for a new plan.
  // Never copy per-document equipment, personnel, derived edits, operator ids, or captured images into a fresh plan.
@@ -1552,7 +1565,7 @@ function planApplyFolderArchive(archive){if(!archive||!archive.store)throw Error
  const referenceBeforeImport=plan17ReferenceSnapshot();
 
   // 데이터를 전부 교체하기 전에 브라우저 복구 사본을 남긴다. 파일 삭제·원본 변경 없음.
-  try{localStorage.setItem('safeWorkPlan_recovery_beforeImport_v1',JSON.stringify({store,masters,exportedAt:new Date().toISOString()}))}catch(e){console.warn('복구 사본 보존 실패',e)}
+  try{void 0 /* plan75: browser recovery duplicate disabled */}catch(e){console.warn('복구 사본 보존 실패',e)}
   for(const k of Object.keys(store))delete store[k];const incomingDocuments=structuredClone(archive.store);for(const k of PLAN17_REFERENCE_FIELDS)delete incomingDocuments[k];Object.assign(store,incomingDocuments);
  // 문서 폴더 불러오기는 이미 별도로 저장된 기준설정을 덮어쓰지 않습니다.
  plan17ApplyReferenceSnapshot(referenceBeforeImport);
@@ -1562,7 +1575,7 @@ function planApplyFolderArchive(archive){if(!archive||!archive.store)throw Error
   if(!Array.isArray(store.planSettingCategories))store.planSettingCategories=[];
   if(!Array.isArray(masters.equipment))masters.equipment=[];if(!Array.isArray(masters.persons))masters.persons=[];
   data=store.draft||((store.currentId&&store.documents[store.currentId])?structuredClone(store.documents[store.currentId]):empty());
-  localStorage.setItem(KEY,JSON.stringify(plan17ReportSnapshot()));plan17WriteReferenceLocal();
+  plan17WriteReferenceLocal();
   if(archive.savedAt)localStorage.setItem(PLAN_FOLDER_LAST_SYNC_KEY,archive.savedAt);
   localStorage.setItem(PLAN_FOLDER_EDIT_KEY,archive.savedAt||new Date().toISOString());
   fillFields();goTab(currentTab||1);
@@ -1634,16 +1647,15 @@ async function initPlanFolder(){try{const prev=await recallPlanFolder();if(!prev
     const next=JSON.stringify(incoming.settings);
     if(before===next)return true;
     if(!localStorage.getItem('safeWorkPlan_referenceSettings_autoRecovery_v1')){
-      try{localStorage.setItem('safeWorkPlan_referenceSettings_autoRecovery_v1',JSON.stringify({savedAt:new Date().toISOString(),settings:plan17ReferenceSnapshot()}))}catch(_e){}
+      try{void 0 /* plan75: no duplicate browser settings backup */}catch(_e){}
     }
     plan17ApplyReferenceSnapshot(incoming.settings);
-    localStorage.setItem(MASTER,JSON.stringify(masters));
     plan17WriteReferenceLocal();
     renderSettingNavigation();renderPersons();renderEquipments();plan13RenderCargo();syncPreview();
     return true;
   }catch(e){console.warn('저장된 기준설정 자동 확인 실패 (현재 자료 유지):',e);return false}
  }
-function mountPlanFolderControls(){const p=$('planDataPane_settings');if(!p)return;const block=document.createElement('section');block.className='plan-folder-section';block.innerHTML=`<h3>데이터 저장 폴더 관리</h3><div id="planFolderName" class="plan-folder-name">지정된 폴더 없음</div><div class="plan-folder-controls"><button type="button" class="btn" onclick="choosePlanFolder()">＋ 폴더 지정·변경</button><button type="button" class="btn" onclick="authorizePlanFolder()">접근 재승인</button><button type="button" class="btn" onclick="importPlanFolderData()">폴더 데이터 불러오기</button><button type="button" class="btn primary" onclick="saveCurrentIntoPlanFolder()">현재 자료 폴더에 저장</button></div><div id="planFolderStatus" class="plan-folder-status" role="status">선택한 폴더에 자동 저장됩니다.</div><div class="plan-folder-hint">선택 폴더에 전체 데이터(안전작업계획서_전체데이터.json)와 저장 문서별 JSON을 만듭니다. 파일·사진 삭제는 하지 않습니다. 브라우저에도 복구용 자료를 유지합니다. 폴더의 기존 자료가 발견되면 확인 전 덮어쓰지 않습니다. Chrome/Edge 폴더 권한이 필요하며 다른 탭에서 동시에 편집하지 마세요.</div>`;p.appendChild(block)}
+function mountPlanFolderControls(){const p=$('planDataPane_settings');if(!p)return;const block=document.createElement('section');block.className='plan-folder-section';block.innerHTML=`<h3>데이터 저장 폴더 관리</h3><div id="planFolderName" class="plan-folder-name">지정된 폴더 없음</div><div class="plan-folder-controls"><button type="button" class="btn" onclick="choosePlanFolder()">＋ 폴더 지정·변경</button><button type="button" class="btn" onclick="authorizePlanFolder()">접근 재승인</button><button type="button" class="btn" onclick="importPlanFolderData()">폴더 데이터 불러오기</button><button type="button" class="btn primary" onclick="saveCurrentIntoPlanFolder()">현재 자료 폴더에 저장</button></div><div id="planFolderStatus" class="plan-folder-status" role="status">선택한 폴더에 자동 저장됩니다.</div><div class="plan-folder-hint">선택 폴더에 전체 데이터(안전작업계획서_전체데이터.json)와 저장 문서별 JSON을 만듭니다. 파일·사진 삭제는 하지 않습니다. 브라우저에는 업무자료를 별도 저장하지 않습니다. 등록된 기기의 지정 폴더만 사용합니다. Chrome/Edge 폴더 권한이 필요하며 다른 탭에서 동시에 편집하지 마세요.</div>`;p.appendChild(block)}
 /* 17차: 전용 기준설정 저장·불러오기. 선택 폴더 기존 파일은 처음 저장 시 확인합니다. */
 async function plan17ReadReferenceFolder(){
  if(!planFolderHandle)return null;
@@ -1676,7 +1688,7 @@ async function plan17LoadReferenceSettings(){if(!planFolderHandle)return alert('
  if(!await planFolderPermission(true))return alert('폴더 읽기 권한을 허용해 주세요.');
  try{const obj=await plan17ReadReferenceFolder();if(!obj)return alert('선택 폴더에 기준설정 파일이 없습니다.');
   if(!confirm('선택 폴더의 기준설정을 불러올까요?\n현재 기준설정은 복구용으로 브라우저에 별도 백업합니다.\n기존 작업계획서와 사진은 변경하지 않습니다.'))return;
-  localStorage.setItem('safeWorkPlan_referenceSettings_recovery_v1',JSON.stringify({savedAt:new Date().toISOString(),settings:plan17ReferenceSnapshot()}));
+  void 0 /* plan75: no duplicate browser settings backup */;
   plan17ApplyReferenceSnapshot(obj.settings);plan17SettingsFolderReady=true;if(!persist())throw Error('통합 기준설정 자료를 브라우저에 저장할 수 없습니다.');renderSettingNavigation();renderPersons();renderEquipments();plan13RenderCargo();syncPreview();
   toast('기준설정 불러오기 완료');
  }catch(err){console.error(err);alert('기준설정 불러오기 실패: '+err.message)}
@@ -1995,7 +2007,7 @@ async function plan13DeletePermanently(kind,id){
  source.splice(index,1);
  if(!persist()){
   source.splice(index,0,rec);
-  try{localStorage.setItem(MASTER,JSON.stringify(masters));plan17WriteReferenceLocal();}catch(err){console.error('완전삭제 롤백 저장:',err)}
+  try{plan17WriteReferenceLocal();}catch(err){console.error('완전삭제 롤백 저장:',err)}
   alert('저장에 실패하여 완전삭제를 취소했습니다. 기존 등록 자료는 유지됩니다.');return;
  }
  if(planFolderHandle){
@@ -2341,7 +2353,7 @@ function plan18DocumentRows(query=''){
  const needle=String(query||'').trim().toLocaleLowerCase('ko-KR');
  return Object.entries(store.documents||{}).filter(([id,doc])=>doc&&typeof doc==='object')
   .filter(([id,doc])=>!needle||[id,doc.writtenDate,doc.company,doc.site,doc.projectType,(doc.regions||[]).map(r=>r.location).join(' ')].join(' ').toLocaleLowerCase('ko-KR').includes(needle))
-  .sort((a,b)=>String(b[1].updatedAt||b[1].createdAt||b[0]).localeCompare(String(a[1].updatedAt||a[1].createdAt||a[0])));
+  .sort((a,b)=>String(b[1].createdAt||b[0]).localeCompare(String(a[1].createdAt||a[0]))||b[0].localeCompare(a[0]));
 }
 function plan18RenderDocuments(kind){
  const pane=$('planDataPane_'+kind);if(!pane)return;
@@ -5615,7 +5627,7 @@ if(searchPane){
   const syncSelects=()=>{
     const types=[...new Set([...(masters.equipment||[]).filter(x=>!x.archived).map(x=>x.name||x.type||''),...String(store.plan13MasterValues?.equipmentTypes||'').split(/\s*\/\s*/)].map(x=>String(x).trim()).filter(Boolean))];
     opts(equip,types.map(t=>[t,t]),'전체 기종');
-    const locations=[...new Set([...getLocations(),...Object.values({...store.documents,...Object.fromEntries(Object.entries(store.planTrashDocuments||{}).map(([id,v])=>[id,v.document]))}).filter(Boolean).flatMap(doc=>[...(doc?.regions?.map(r=>r.location||'')||[]),doc?.plan23CellEdits?.['2:C5']||'']).flatMap(s=>String(s).split(/\s+\/\s+/).map(x=>x.trim()).filter(Boolean))])];
+    const locations=[...new Set([...getLocations(),...Object.values(store.documents||{}).flatMap(doc=>[...(doc?.regions?.map(r=>r.location||'')||[]),doc?.plan23CellEdits?.['2:C5']||'']).flatMap(s=>String(s).split(/\s+\/\s+/).map(x=>x.trim()).filter(Boolean))])];
     opts(loc,locations.map(t=>[t,t]),'전체 작업위치');
   };
   const field=(label,input,cls='')=>{const el=make('label','plan48-search-field '+cls);el.append(make('span','',label),input);return el};
@@ -5623,16 +5635,12 @@ if(searchPane){
   const dateWrap=make('div','plan48-dates');dateWrap.append(from,make('span','','~'),to);
   const refresh=make('button','btn','새로고침');refresh.type='button';refresh.id='plan48Refresh';
   const apply=make('button','btn primary','검색');apply.type='button';apply.id='plan45Apply';
-  const searchActions=make('div','plan76-search-actions');searchActions.append(refresh,apply);
-  row2.append(field('검색어',keyword),field('기간',dateWrap),searchActions);
+  row2.append(field('검색어',keyword),field('기간',dateWrap),refresh,apply);
   ctrl.append(row1,row2);
   const header=searchPane.querySelector('.plan18-list-head');if(header)header.style.display='none';
   const meta=searchPane.querySelector(':scope > .plan18-meta');if(meta)meta.style.display='none';
   searchPane.prepend(ctrl);syncSelects();
   let active={equipment:'',loc:'',keyword:'',from:'',to:''},searchPage=0;
-  const selectedPlans=new Set(),selectedTrash=new Set();
-  const selection=()=>window.plan76TrashMode?selectedTrash:selectedPlans;
-  window.plan76ChangeListMode=()=>{selectedPlans.clear();selectedTrash.clear();runSearch()};
   const SEARCH_PAGE_SIZE=30;
   const getEq=doc=>(doc.equipment||[]).map(id=>(masters.equipment||[]).find(x=>x.id===id)).filter(Boolean);
   const getLoc=doc=>{
@@ -5643,10 +5651,10 @@ if(searchPane){
     return [...new Set(sources.map(s=>String(s??'').trim()).filter(Boolean))];
   };
   const fromSearch=()=>({equipment:equip.value,loc:loc.value,keyword:keyword.value.trim(),from:from.value,to:to.value});
-  const runSearch=()=>{selectedPlans.clear();selectedTrash.clear();active=fromSearch();searchPage=0;plan18RenderDocuments('search')};
+  const runSearch=()=>{active=fromSearch();searchPage=0;plan18RenderDocuments('search')};
   apply.onclick=runSearch;keyword.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}});
   refresh.onclick=()=>{syncSelects();runSearch();toast('저장된 문서 목록을 새로고침했습니다.')};
-  plan18DocumentRows=function(){const source=window.plan76TrashMode?Object.fromEntries(Object.entries(store.planTrashDocuments||{}).map(([id,v])=>[id,v.document])):(store.documents||{});return Object.entries(source).filter(([id,doc])=>{
+  plan18DocumentRows=function(){return Object.entries(store.documents||{}).filter(([id,doc])=>{
     if(!doc||typeof doc!=='object')return false;
     const date=String(doc.writtenDate||'');if(active.from&&date<active.from)return false;if(active.to&&date>active.to)return false;
     const equipment=getEq(doc),locs=getLoc(doc);
@@ -5654,56 +5662,27 @@ if(searchPane){
     if(!valueMatch(kind,active.equipment)||!valueMatch(locs.join(' / '),active.loc))return false;
     const hay=[id,date,doc.planTitle,doc.company,doc.projectType,doc.site,doc.memo,kind,locs.join(' '),...equipment.flatMap(x=>[x.model,x.performance,x.spec,planEquipmentLicenseValue(x),x.intake]),...(doc.regions||[]).flatMap(r=>[r.method,r.layer1,r.layer2])].join(' ');
     return valueMatch(hay,active.keyword);
-  }).sort((a,b)=>String(b[1].updatedAt||b[1].createdAt||b[0]).localeCompare(String(a[1].updatedAt||a[1].createdAt||a[0])))};
+  }).sort((a,b)=>String(b[1].createdAt||b[0]).localeCompare(String(a[1].createdAt||a[0]))||b[0].localeCompare(a[0]))};
   const priorRender=plan18RenderDocuments;
   plan18RenderDocuments=function(kind){
     if(kind!=='search')return priorRender(kind);
     const rows=plan18DocumentRows(),box=searchPane.querySelector('.plan18-results');if(!box)return;
     box.replaceChildren();box.classList.add('plan45-results');
-    const trash=!!window.plan76TrashMode,selected=selection(),allowed=new Set(rows.map(([id])=>id));
-    for(const id of selected)if(!allowed.has(id))selected.delete(id);
-    const toolbar=make('div','plan76-bulk-controls');
-    toolbar.append(make('strong','',trash?'삭제 계획서 검색 결과':'계획서 검색 결과'));
-    const count=make('span','');
-    const all=make('input');all.type='checkbox';all.id='plan76SelectAll';all.setAttribute('aria-label','현재 검색 결과 전체선택');
-    const allLabel=make('label','');allLabel.append(all,document.createTextNode(' 전체선택'));
-    const clear=make('button','btn','선택해제');clear.type='button';
-    const actionButtons=[];
-    const updateSelection=()=>{
-     count.textContent='선택 '+selected.size+' / 검색 '+rows.length+'건';
-     all.checked=rows.length>0&&selected.size===rows.length;all.indeterminate=selected.size>0&&selected.size<rows.length;
-     all.disabled=!rows.length;for(const b of actionButtons)b.disabled=!selected.size;
-     box.querySelectorAll('input[data-plan-select]').forEach(c=>c.checked=selected.has(c.dataset.planSelect));
-    };
-    all.onchange=()=>{selected.clear();if(all.checked)rows.forEach(([id])=>selected.add(id));updateSelection()};
-    clear.onclick=()=>{selected.clear();updateSelection()};toolbar.append(allLabel,clear,count);
-    for(const [label,action] of (trash?[['선택 복원','restore'],['선택 완전삭제','purge']]:[['선택 삭제','delete']])){
-     const b=make('button','btn'+(action==='restore'?'':' danger'),label);b.type='button';b.dataset.bulkAction=action;actionButtons.push(b);
-     b.onclick=async()=>{const ids=[...selected];toolbar.querySelectorAll('button,input').forEach(x=>x.disabled=true);try{if(await window.plan76BulkAction(ids,action))selected.clear()}finally{plan18RenderDocuments('search')}};toolbar.append(b);
-    }
-    box.append(toolbar);updateSelection();
-
     if(!rows.length){searchPage=0;box.append(make('div','plan18-empty','검색 조건에 맞는 계획서가 없습니다.'));return}
     const wrap=make('div','plan45-table-wrap'),table=make('table','plan45-table');
-    const thead=make('thead'),thRow=make('tr');['선택','관리','문서번호','작성일(수정일)','제목','업체','기종','모델명','성능','자격·면허','반입일','작업위치',trash?'삭제일':'최종 저장'].forEach(x=>thRow.append(make('th','',x)));thead.append(thRow);table.append(thead);
+    const thead=make('thead'),thRow=make('tr');['관리','문서번호','작성일(수정일)','제목','업체','기종','모델명','성능','자격·면허','반입일','작업위치','최종 저장'].forEach(x=>thRow.append(make('th','',x)));thead.append(thRow);table.append(thead);
     const body=make('tbody');
     const pageCount=Math.max(1,Math.ceil(rows.length/SEARCH_PAGE_SIZE));
     searchPage=Math.min(searchPage,pageCount-1);
     for(const [id,doc] of rows.slice(searchPage*SEARCH_PAGE_SIZE,(searchPage+1)*SEARCH_PAGE_SIZE)){
-      const tr=make('tr');tr.dataset.documentId=id;if(!trash&&data.id===id)tr.classList.add('plan45-current');
-      const selectTd=make('td'),check=make('input');check.type='checkbox';check.dataset.planSelect=id;check.setAttribute('aria-label',id+' 선택');check.checked=selected.has(id);check.onchange=()=>{if(check.checked)selected.add(id);else selected.delete(id);updateSelection()};selectTd.append(check);tr.append(selectTd);
-      const eq=getEq(doc);const cells=[id,doc.company||'',eq.map(x=>x.name||x.type||'').join(' / '),eq.map(x=>x.model||'').join(' / '),eq.map(x=>x.performance||x.spec||'').join(' / '),eq.map(x=>planEquipmentLicenseValue(x)).join(' / '),eq.map(x=>x.intake||x.arrivalDate||'').join(' / '),getLoc(doc).join(' / '),(trash?store.planTrashDocuments[id]?.deletedAt:doc.updatedAt)?new Date(trash?store.planTrashDocuments[id].deletedAt:doc.updatedAt).toLocaleString('ko-KR'):''];
-      const delTd=make('td','plan69-doc-manage');
-      for(const [label,action] of (trash?[['복원',()=>window.plan75RestoreDocument(id)],['완전삭제',()=>window.plan75PurgeDocument(id)]]:[['삭제',()=>window.plan48RemoveDocument(id)],['복사',()=>window.plan69CopyDocument(id)]])){
-       const b=make('button','btn'+(label.includes('삭제')?' danger plan48-delete-doc':label==='복사'?' plan69-copy-btn':''),label);b.type='button';b.onclick=async()=>{await action();plan18RenderDocuments('search')};delTd.append(b);
-      }tr.append(delTd);
-      const openTd=make('td');if(trash){openTd.textContent=id}else{const open=make('button','plan48-open-date',id);open.type='button';open.title='문서번호 클릭하여 계획서 열기';open.onclick=()=>plan18OpenDocument(id);openTd.append(open)}tr.append(openTd);
-
+      const tr=make('tr');if(data.id===id)tr.classList.add('plan45-current');
+      const eq=getEq(doc);const cells=[id,doc.company||'',eq.map(x=>x.name||x.type||'').join(' / '),eq.map(x=>x.model||'').join(' / '),eq.map(x=>x.performance||x.spec||'').join(' / '),eq.map(x=>planEquipmentLicenseValue(x)).join(' / '),eq.map(x=>x.intake||x.arrivalDate||'').join(' / '),getLoc(doc).join(' / '),doc.updatedAt?new Date(doc.updatedAt).toLocaleString('ko-KR'):''];
+      const delTd=make('td','plan69-doc-manage');const del=make('button','btn danger plan48-delete-doc','삭제');del.type='button';del.title='선택한 문서 삭제';del.onclick=()=>window.plan48RemoveDocument(id);const copy=make('button','btn plan69-copy-btn','복사');copy.type='button';copy.title='기존 원본을 보존하고 새 문서번호로 복사';copy.onclick=()=>window.plan69CopyDocument(id);delTd.append(del,copy);tr.append(delTd);
+      const openTd=make('td');const open=make('button','plan48-open-date',id);open.type='button';open.title='문서번호 클릭하여 계획서 열기';open.onclick=()=>plan18OpenDocument(id);openTd.append(open);tr.append(openTd);
       const modified=doc.updatedAt?new Date(doc.updatedAt):null;
       const modifiedText=modified&&!Number.isNaN(modified.getTime())?[modified.getFullYear(),String(modified.getMonth()+1).padStart(2,'0'),String(modified.getDate()).padStart(2,'0')].join('-'):'';
       const dateTd=make('td','',(doc.writtenDate||'날짜 없음')+(modifiedText?' ('+modifiedText+')':''));tr.append(dateTd);
-      const titleTd=make('td','plan69-title-cell');if(trash){titleTd.textContent=doc.planTitle||'제목 없음'}else{const titleBtn=make('button','plan69-title-btn',doc.planTitle||'제목 입력');titleBtn.type='button';titleBtn.title='제목 클릭하여 수정';titleBtn.onclick=()=>window.plan69EditTitle(id);titleTd.append(titleBtn)}tr.append(titleTd);
-
+      const titleTd=make('td','plan69-title-cell');const titleBtn=make('button','plan69-title-btn',doc.planTitle||'제목 입력');titleBtn.type='button';titleBtn.title='제목 클릭하여 수정';titleBtn.onclick=()=>window.plan69EditTitle(id);titleTd.append(titleBtn);tr.append(titleTd);
       for(const text of cells.slice(1)){
        const td=make('td');td.title=text||'';td.textContent=text||'-';tr.append(td);
       }
@@ -6268,8 +6247,67 @@ if(settingsTree){
     notice.querySelector('button').onclick=()=>window.plan48PurgeCargo();
     root.append(notice);
   }
-  // Plan deletion, restoration and purge share the verified folder transaction below.
+  // A durable browser recovery copy and the active snapshot must both track a one-item deletion.
+  // Otherwise the startup recovery feature can immediately offer the deleted document again.
+  async function plan65DeleteCheckpoint(key){
+    if(!planFolderHandle||!await planFolderPermission(false))throw Error('원본 폴더가 연결되지 않아 삭제를 중단합니다.');
+    const savedAt=new Date().toISOString();let i=0,name;
+    do{name='안전작업계획서_삭제전복구_'+savedAt.replace(/[-:TZ.]/g,'').slice(0,14)+(i?'_'+i:'')+'.json';i++}
+    while(await planFolderHandle.getFileHandle(name).then(()=>true,e=>{if(e.name==='NotFoundError')return false;throw e}));
+    const snapshot={project:'안전-작업계획서',version:3,kind:'settings-and-plans',savedAt,store:plan17ReportSnapshot(),settings:plan17ReferenceSnapshot(true),masters:plan17RegisteredMastersSnapshot(true)};
+    const h=await planFolderHandle.getFileHandle(name,{create:true}),w=await h.createWritable();
+    await w.write(JSON.stringify(snapshot,null,2));await w.close();
+  }
 
+  window.plan48RemoveDocument=async function(id){
+    if(!Object.hasOwn(store.documents||{},id))return;
+    if(!confirm('['+id+'] 계획서 한 건만 삭제하시겠습니까?\n해당 문서에 속한 내용·사진만 삭제 대상입니다.\n다른 문서, 등록 명부, 설정 및 기존 백업은 유지됩니다.'))return;
+    const original=structuredClone(store.documents[id]),previous=structuredClone(data),prevId=store.currentId;
+    // Keep a durable recovery point BEFORE any mutation; never delete registered masters or settings.
+    try{await plan65DeleteCheckpoint('before-delete-'+id+'-'+Date.now())}
+    catch(err){alert('삭제 전 복구 사본을 저장하지 못했습니다. 삭제하지 않았습니다: '+err.message);return}
+    let listFile=null,listOld=null,listNew=null;
+    // Folder archives are backups. Update an actively synchronized plan list only;
+    // never rewrite a combined/settings backup or a historical version implicitly.
+    try{
+      const sync=window.plan66PlanListSync?.();
+      if(planFolderHandle&&sync?.enabled){
+        if(!await planFolderPermission(true))throw Error('폴더 쓰기 권한이 없습니다');
+        listFile=await planFolderHandle.getFileHandle(sync.filename,{create:false}).catch(err=>{if(err.name==='NotFoundError')return null;throw err});
+        if(listFile){
+          listOld=await (await listFile.getFile()).text();
+          const payload=JSON.parse(listOld);
+          if(payload?.project!=='안전-작업계획서'||!payload?.store?.documents||typeof payload.store.documents!=='object')throw Error('기존 계획서 목록 형식이 올바르지 않습니다');
+          delete payload.store.documents[id];
+          if(payload.store.currentId===id)payload.store.currentId=null;
+          if(payload.store.draft?.id===id)payload.store.draft=null;
+          payload.savedAt=new Date().toISOString();listNew=JSON.stringify(payload,null,2);
+        }
+      }
+    }catch(err){alert('폴더 목록을 안전하게 확인할 수 없어 삭제하지 않았습니다: '+err.message);return}
+    const oldDeletedMark=store.planDeletedDocuments?.[id];
+    (store.planDeletedDocuments||=( {}))[id]=new Date().toISOString();
+    delete store.documents[id];
+    if(data.id===id){data=empty();store.currentId=null}
+    else if(store.currentId===id)store.currentId=null;
+    if(!persist()||!await plan66FlushPersistence()){
+      store.documents[id]=original;if(oldDeletedMark===undefined)delete store.planDeletedDocuments[id];else store.planDeletedDocuments[id]=oldDeletedMark;data=previous;store.currentId=prevId;persist();await plan66FlushPersistence();plan66StorageStatus('failed',plan66Failure||Error('문서 삭제를 취소하고 원래 자료를 유지합니다.'));return;
+    }
+    try{
+      clearTimeout(planFolderTimer);
+      if(listFile&&listNew!==null){
+        const writer=await listFile.createWritable();try{await writer.write(listNew);await writer.close()}catch(e){try{await writer.abort()}catch(_){}throw e}
+      }
+      await plan65DeleteCheckpoint('active');
+      if(!data.id)fillFields();plan18RenderDocuments('search');toast('['+id+'] 계획서 한 건 삭제 완료');
+    }catch(err){
+      // Revert ONLY the affected document; attempt to recover a partially changed active plan list.
+      if(listFile&&listOld!==null){try{const w=await listFile.createWritable();await w.write(listOld);await w.close()}catch(e){console.error('폴더 목록 복구 확인 필요',e)}}
+      store.documents[id]=original;if(oldDeletedMark===undefined)delete store.planDeletedDocuments[id];else store.planDeletedDocuments[id]=oldDeletedMark;data=previous;store.currentId=prevId;persist();
+      try{await plan65DeleteCheckpoint('active')}catch(backupError){console.error('복원 기록 확인 필요',backupError)}
+      alert('저장 오류로 삭제를 취소하고 해당 문서를 복원했습니다: '+err.message);
+    }
+  };
 })();
 </script>
 
@@ -6555,7 +6593,7 @@ if(settingsTree){
  let busy=false;
  const DB_NAME='safeWorkPlan_durable_v1',DB_OBJECT='snapshots';
  function db(){return new Promise((resolve,reject)=>{if(!window.indexedDB)return reject(Error('브라우저 추가 저장소 미지원'));const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(DB_OBJECT))req.result.createObjectStore(DB_OBJECT)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||Error('브라우저 추가 저장소 연결 실패'))})}
- async function dbSave(key,payload){const d=await db();try{await new Promise((resolve,reject)=>{const tx=d.transaction(DB_OBJECT,'readwrite');tx.objectStore(DB_OBJECT).put(payload,key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)})}finally{d.close()}}
+ async function dbSave(key,payload){return true;/* plan75: no business record stored in browser */}
  async function backupCurrent(key='active') {return dbSave(key,{savedAt:new Date().toISOString(),report:structuredClone(plan17ReportSnapshot()),masters:structuredClone(masters),reference:plan17ReferenceSnapshot(true)})}
  // persist() now queues one complete snapshot and exposes an awaited completion check.
  // No implicit file writes. Preserve browser draft autosave and explicit folder saves.
@@ -6667,12 +6705,12 @@ if(settingsTree){
        const incomingIds=new Set(masters[kind].map(x=>x.id));for(const previous of oldMasters[kind]||[])if(!incomingIds.has(previous.id))masters[kind].push(structuredClone(previous));
      }
      await backupCurrent('active');
-     try{localStorage.setItem(MASTER,JSON.stringify(masters));localStorage.setItem(PLAN17_REFERENCE_KEY,JSON.stringify(payload))}catch(e){console.warn('브라우저 저장 용량 제한 · 추가 안전 저장소는 정상:',e)}
+     try{void 0 /* plan75: only local folder stores masters */}catch(e){console.warn('브라우저 저장 용량 제한 · 추가 안전 저장소는 정상:',e)}
      renderSettingNavigation();renderPersons();renderEquipments();plan13RenderCargo();syncPreview();
      const status=$60('plan17SettingsStatus');if(status)status.textContent='전체 설정 불러오기 완료';toast('전체 설정 불러오기 완료');return true;
    }catch(e){plan17ApplyReferenceSnapshot(oldSettings);data.customSettingsValues=oldDocSettings;for(const key of ['persons','equipment','cargo'])masters[key]=oldMasters[key];renderSettingNavigation();throw e}
   })};
- // Save the current document, then commit the document archive (including embedded photos) to the selected folder.
+ // Document save covers the current document; top folder buttons cover documents only. Settings use their own controls.
  saveDocument=function(){return busyRun('계획서 저장 중',async()=>{
    if(!data.writtenDate){alert('작성일을 입력해 주세요.');return false}
    const previous=structuredClone(data),priorDocId=store.currentId;
@@ -6680,21 +6718,8 @@ if(settingsTree){
    if(plan68Changed())data.updatedAt=new Date().toISOString();const existed=Object.hasOwn(store.documents,data.id)?structuredClone(store.documents[data.id]):null;
    store.documents[data.id]=structuredClone(data);plan68Remember();store.currentId=data.id;
    try {await backupCurrent('active')}catch(e){data=previous;store.currentId=priorDocId;if(existed)store.documents[previous.id]=existed;else delete store.documents[data.id];alert('안전 저장이 실패하여 계획서 저장을 취소했습니다: '+e.message);return false}
-   if(!persist()||!await plan66FlushPersistence())return false;
-   updateSummary();plan18RenderAllDocuments();
-   const el=$60('saveStatus');
-   try{
-    if(!await window.plan70SaveDocumentFolder()){
-     if(el)el.textContent='임시 보관됨 · 지정 폴더 저장 미완료';
-     $60('statusChip').textContent='폴더 저장 필요';return false;
-    }
-   }catch(e){
-    if(el)el.textContent='폴더 저장 실패 · 현재 자료는 임시 보관됨';
-    $60('statusChip').textContent='폴더 저장 실패';
-    alert('지정 폴더에 계획서를 저장하지 못했습니다. 사진과 작성 내용은 현재 화면과 브라우저 임시 보관소에 유지됩니다.\n폴더 권한과 저장 공간을 확인한 후 다시 [계획서 저장]을 눌러 주세요.\n'+e.message);return false;
-   }
-   if(el)el.textContent='지정 폴더 저장·사진 확인 완료';
-   $60('statusChip').textContent='폴더 저장됨';toast('계획서·사진 지정 폴더 저장 완료');return true;
+   if(!persist()||!await plan66FlushPersistence())return false;const el=$60('saveStatus');if(el)el.textContent='지정 폴더에 저장 진행 중';
+   $60('statusChip').textContent='저장됨';updateSummary();plan18RenderAllDocuments();toast('계획서 저장 완료');return true;
   })};
  // Click only the model/type source. All derived equipment values are inert.
  const lockedCells=new Set(['1:D20','1:F20','1:J21','1:J22','1:K27','1:D22']);
@@ -6830,7 +6855,6 @@ if(settingsTree){
   let key=`${stem}_복구백업_${date}`;let n=1;
   while(await folderFileRead(key+'.json')!==null)key=`${stem}_복구백업_${date}_${n++}`;
   await folderFileWrite(key+'.json',oldText);
-  if(await folderFileRead(key+'.json')!==oldText)throw Error('기존 파일의 복구백업을 확인하지 못해 저장을 중단했습니다.');
  }
  async function requiresFolder(){
   if(!planFolderHandle){alert('설정에서 저장 폴더를 먼저 지정해 주세요.');return false}
@@ -6874,26 +6898,24 @@ if(settingsTree){
   return true;
  }
  async function safetyCheckpoint(tag){
-  // Abort BEFORE importing if the separate durable backup cannot be committed.
-  const db=await new Promise((res,rej)=>{const r=indexedDB.open('safeWorkPlan_durable_v1',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('snapshots'))r.result.createObjectStore('snapshots')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
-  try{await new Promise((res,rej)=>{const tx=db.transaction('snapshots','readwrite');tx.objectStore('snapshots').put({savedAt:new Date().toISOString(),report:jsonCopy(plan17ReportSnapshot()),reference:plan17ReferenceSnapshot(true),masters:jsonCopy(masters),current:jsonCopy(data)},tag);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error)})}finally{db.close()}
+  if(!await requiresFolder())throw Error('지정 폴더 연결이 필요합니다.');
+  const date=new Date().toISOString().replace(/[-:TZ.]/g,'').slice(0,14);
+  let base='안전작업계획서_작업전복구_'+tag.replace(/[^a-zA-Z0-9_-]/g,'')+'_'+date,filename=base+'.json',n=1;
+  while(await folderFileRead(filename)!==null)filename=base+'_'+(n++)+'.json';
+  const payload={project:'안전-작업계획서',savedAt:new Date().toISOString(),version:3,kind:'settings-and-plans',store:plan17ReportSnapshot(),settings:plan17ReferenceSnapshot(true),masters:plan17RegisteredMastersSnapshot(true)};
+  await folderFileWrite(filename,JSON.stringify(payload,null,2));
+  if((await folderFileRead(filename))===null)throw Error('폴더 내 복구 사본 작성에 실패했습니다.');
  }
+
  function snapshotState(){return {report:jsonCopy(store),registry:jsonCopy(masters),draft:jsonCopy(data)};}
  function rollback(before){Object.keys(store).forEach(k=>delete store[k]);Object.assign(store,before.report);Object.keys(masters).forEach(k=>delete masters[k]);Object.assign(masters,before.registry);data=before.draft;fillFields();plan18RenderAllDocuments();}
- function applyPlans(snapshot,{restoreBackup=false}={}){
+ function applyPlans(snapshot){
   validatePlans(snapshot);
   // Protect current settings, registry and all the added requested features. The document archive contains ONLY plan data.
   const refs=Object.fromEntries(PLAN17_REFERENCE_FIELDS.filter(k=>Object.hasOwn(store,k)).map(k=>[k,jsonCopy(store[k])]));
   const incoming=jsonCopy(snapshot.store);
-  // Explicit server restoration uses deletion state from that backup, not later local deletions.
-  incoming.planDeletedDocuments={...(incoming.planDeletedDocuments||{}),...(restoreBackup?{}:(store.planDeletedDocuments||{}))};
-  incoming.planTrashDocuments={...(incoming.planTrashDocuments||{}),...(restoreBackup?{}:(store.planTrashDocuments||{}))};
-  if(!restoreBackup)for(const id of Object.keys(store.planDeletedDocuments||{})){
-   if(!store.planTrashDocuments?.[id])delete incoming.planTrashDocuments[id];
-  }
-
+  incoming.planDeletedDocuments={...(incoming.planDeletedDocuments||{}),...(store.planDeletedDocuments||{})};
   for(const id of Object.keys(incoming.planDeletedDocuments))delete incoming.documents?.[id];
-  for(const id of Object.keys(incoming.documents||{}))delete incoming.planTrashDocuments[id];
   if(incoming.planDeletedDocuments[incoming.currentId])incoming.currentId=null;
   if(incoming.draft?.id&&incoming.planDeletedDocuments[incoming.draft.id])incoming.draft=null;
   for(const key of PLAN17_REFERENCE_FIELDS)delete incoming[key];
@@ -6937,53 +6959,6 @@ if(settingsTree){
  };
  // Auto browser draft save continues. Automatic folder writes are limited to documents after an explicit plans-save handshake.
  let planOnlyAutosave=false;
- async function plan70CleanRecovery(folder){
-  // Only this application's dated recovery copies; never originals or separate backups.
-  if(typeof folder.entries!=='function'||typeof folder.removeEntry!=='function')return;
-  const now=new Date(),cutoff=new Date(now);
-  const day=cutoff.getUTCDate();cutoff.setUTCDate(1);cutoff.setUTCMonth(cutoff.getUTCMonth()-1);
-  const last=new Date(Date.UTC(cutoff.getUTCFullYear(),cutoff.getUTCMonth()+1,0)).getUTCDate();
-  cutoff.setUTCDate(Math.min(day,last));
-  const pattern=/^안전작업계획서_(?:전체데이터|계획서목록|기준설정)_복구백업_(\d{14})(?:_[1-9]\d*)?\.json$/;
-  try{
-   for await(const [name,entry] of folder.entries()){
-    if(folder!==planFolderHandle)return;
-    const match=pattern.exec(name);if(!match||entry.kind!=='file')continue;
-    const stamp=match[1];
-    const date=new Date(stamp.slice(0,4)+'-'+stamp.slice(4,6)+'-'+stamp.slice(6,8)+'T'+stamp.slice(8,10)+':'+stamp.slice(10,12)+':'+stamp.slice(12,14)+'Z');
-    if(!Number.isFinite(date.getTime())||date.toISOString().replace(/[-:TZ.]/g,'').slice(0,14)!==stamp||date>=cutoff)continue;
-    await folder.removeEntry(name);
-   }
-  }catch(e){console.warn('오래된 복구백업 정리 보류:',e);toast('계획서는 저장됨 · 오래된 복구백업 정리는 다음 저장 때 다시 시도합니다.')}
- }
- let plan70WriteQueue=Promise.resolve();
- function plan70WritePlans(snapshot,keepBackup=false){
-  const folder=planFolderHandle;
-  const value=JSON.stringify(snapshot,null,2);
-  const job=plan70WriteQueue.catch(()=>{}).then(async()=>{
-   if(folder!==planFolderHandle)throw Error('저장 폴더가 변경되었습니다. 다시 저장해 주세요.');
-   const previous=await folderFileRead(namePlans);
-   if(keepBackup&&previous!==null&&previous!==value)await backupExistingFile(namePlans,previous);
-   await folderFileWrite(namePlans,value);
-   const readBack=await folderFileRead(namePlans);
-   if(readBack!==value)throw Error('저장 파일을 다시 읽어 확인하지 못했습니다.');
-   validatePlans(JSON.parse(readBack));
-   await plan70CleanRecovery(folder);
-   return true;
-  });
-  plan70WriteQueue=job;return job;
- }
- window.plan70SaveDocumentFolder=async()=>{
-  if(!await requiresFolder())return false;
-  clearTimeout(planFolderTimer);
-  // A full document snapshot retains photo source bytes and their position/size/rotation.
-  const snapshot=plansCurrent();
-  if(!snapshot.store.documents[data.id])throw Error('저장할 계획서를 찾지 못했습니다.');
-  await plan70WritePlans(snapshot,true);
-  planFolderLastWrite=snapshot.savedAt;
-  planFolderState('계획서·사진 지정 폴더 저장 및 다시 읽기 확인 완료 · '+namePlans);
-  return true;
- };
  window.plan66PlanListSync=()=>({enabled:planOnlyAutosave,filename:namePlans});
  schedulePlanFolderSync=function(){
   clearTimeout(planFolderTimer);if(!planFolderHandle||planFolderPaused||!planOnlyAutosave)return;
@@ -6995,15 +6970,14 @@ if(settingsTree){
   if(!planOnlyAutosave||!planFolderHandle||planFolderPaused)return false;
   const snapshot=plansCurrent();
   // Never write settings to the plan-only archive. Never delete archived document files.
-  await plan70WritePlans(snapshot);
+  await folderFileWrite(namePlans,JSON.stringify(snapshot,null,2));
   planFolderLastWrite=snapshot.savedAt;planFolderState('계획서 목록 자동 저장 완료');return true;
  };
  // Search-list plans: independent from settings, containing ALL saved documents visible in search (not just the current sheet).
  window.plan64SavePlans=()=>{return (async()=>{
   if(!await requiresFolder())return false;
-  clearTimeout(planFolderTimer);
-  const done=await plan70WritePlans(plansCurrent(),true);
-  if(done){planOnlyAutosave=true;planFolderPaused=false;planFolderState('검색 계획서 목록·사진 저장 및 다시 읽기 확인 완료 · 설정 별도 보호');toast('계획서 목록·사진 저장 완료')}
+  const done=await safeWrite(namePlans,plansCurrent(),'계획서 목록');
+  if(done){planOnlyAutosave=!plan65LastSaveWasSeparate;planFolderPaused=false;planFolderState(plan65LastSaveWasSeparate?'기존 목록 유지 · 새 목록 별도 백업 저장 완료':'검색 계획서 목록 저장 완료 · 설정 별도 보호');toast('계획서 목록 저장 완료')}
   return done;
  })().catch(e=>{console.error(e);alert('계획서 목록 저장 실패: '+e.message);return false})};
  window.plan64LoadPlans=()=>{return (async()=>{
@@ -7085,100 +7059,6 @@ if(settingsTree){
    return await run();
   }finally{plan64Busy=false;if(overlay)overlay.hidden=true;document.body.removeAttribute('aria-busy')}
  }
- window.plan72ApplyServerBackup=restored=>safeAction('서버 백업 불러오기',async()=>{
-  if(!await requiresFolder())return false;
-  const payload={project:'안전-작업계획서',store:jsonCopy(restored.plans)};validatePlans(payload);
-  if(!restored.settings||!restored.draft||typeof restored.draft!=='object'||Array.isArray(restored.draft))throw Error('설정 또는 작성 문서 형식 오류');
-  for(const key of ['persons','equipment','cargo'])if(!Array.isArray(restored.registry?.[key]))throw Error('등록 명부 형식 오류');
-  clearTimeout(planFolderTimer);clearTimeout(plan17SettingsTimer);
-  await plan70WriteQueue.catch(()=>{});
-  const folder=planFolderHandle,before=snapshotState(),wasPaused=planFolderPaused;
-  planFolderPaused=true;
-  const oldFiles=new Map(),written=[];
-  try{
-   await safetyCheckpoint('before-server-restore');
-   // Save the entire current working state, even if it has not yet been added to the search list.
-   const recovery=archiveCurrent();recovery.store.draft=jsonCopy(data);
-   const date=new Date().toISOString().replace(/[-:TZ.]/g,'').slice(0,14);
-   let recoveryName='안전작업계획서_전체데이터_복구백업_'+date+'.json',n=1;
-   while(await folderFileRead(recoveryName)!==null)recoveryName='안전작업계획서_전체데이터_복구백업_'+date+'_'+(n++)+'.json';
-   const recoveryText=JSON.stringify(recovery,null,2);await folderFileWrite(recoveryName,recoveryText);
-   if(await folderFileRead(recoveryName)!==recoveryText)throw Error('현재 자료의 복구백업 확인 실패');
-   for(const name of [nameCombined,namePlans,PLAN17_REFERENCE_FILE]){
-    const old=await folderFileRead(name);oldFiles.set(name,old);if(old!==null)await backupExistingFile(name,old);
-   }
-   applyPlans(payload,{restoreBackup:true});applySettings({...restored.settings,registeredMasters:restored.registry});
-   data=jsonCopy(restored.draft);
-   if(data.id&&store.planDeletedDocuments?.[data.id])data=empty();
-   store.currentId=data.id||null;store.draft=jsonCopy(data);
-   const combined=archiveCurrent(),settings={project:'안전-작업계획서',version:3,kind:'reference-settings',savedAt:combined.savedAt,settings:combined.settings};
-   for(const [name,value] of [[nameCombined,combined],[namePlans,plansCurrent()],[PLAN17_REFERENCE_FILE,settings]]){
-    if(folder!==planFolderHandle)throw Error('저장 폴더가 변경되었습니다.');
-    const text=JSON.stringify(value,null,2);written.push(name);await folderFileWrite(name,text);
-    if(await folderFileRead(name)!==text)throw Error(name+' 저장 확인 실패');
-   }
-   await finishImport('서버 백업 불러오기 완료 · 사진 포함 폴더 저장 확인');
-   plan68Remember();plan17SettingsFolderReady=true;return true;
-  }catch(e){
-   rollback(before);persist();await plan66FlushPersistence();
-   const failures=[];
-   for(const name of written.reverse())try{
-    const old=oldFiles.get(name);
-    if(old===null){await folder.removeEntry(name)}else{await folderFileWrite(name,old);if(await folderFileRead(name)!==old)throw Error('복구 확인 실패')}
-   }catch(error){failures.push(name)}
-   if(failures.length)throw Error(e.message+' · 일부 폴더 파일 복구 확인 필요: '+failures.join(', ')+' · 복구백업은 보존되어 있습니다.');
-   throw e;
-  }finally{planFolderPaused=wasPaused}
- });
-
- async function changePlanTrash(ids,action){
-  ids=[...new Set(Array.isArray(ids)?ids:[ids])];if(!ids.length){alert('계획서를 선택하세요.');return false}
-  for(const id of ids){
-  const entry=store.planTrashDocuments?.[id],doc=action==='delete'?store.documents?.[id]:entry?.document;
-  if(!doc){alert('계획서를 찾을 수 없습니다.');return false}
-  if(action==='restore'&&store.documents?.[id]){alert('같은 문서번호가 이미 있습니다. 기존 계획서를 덮어쓰지 않았습니다.');return false}
-  }
-  const question=action==='delete'?'삭제 계획서 목록으로 옮길까요? 내용과 사진은 보관되며 복원할 수 있습니다.':action==='restore'?'이 계획서를 원래 문서번호와 사진으로 복원할까요?':'이 계획서를 삭제 목록에서 완전삭제할까요? 여기에서는 다시 복원할 수 없습니다. 이미 만든 로컬·서버 백업은 별도로 남습니다.';
-  if(!confirm('선택한 '+ids.length+'건 · '+question))return false;
-  return safeAction(action==='restore'?'계획서 복원':action==='purge'?'계획서 완전삭제':'계획서 삭제',async()=>{
-   if(!await requiresFolder())return false;
-   clearTimeout(planFolderTimer);await plan70WriteQueue.catch(()=>{});
-   const before=snapshotState(),folder=planFolderHandle,wasPaused=planFolderPaused;planFolderPaused=true;
-   let prior=null,touched=false;
-   try{
-    await safetyCheckpoint('before-plan-'+action);
-    prior=await folderFileRead(namePlans);if(prior!==null)await backupExistingFile(namePlans,prior);
-    store.planTrashDocuments||={};store.planDeletedDocuments||={};
-    for(const id of ids){
-    if(action==='delete'){
-     const deletedAt=new Date().toISOString();
-     store.planTrashDocuments[id]={document:jsonCopy(store.documents[id]),deletedAt};store.planDeletedDocuments[id]=deletedAt;
-     delete store.documents[id];if(data.id===id){data=empty();store.currentId=null}
-     if(store.currentId===id)store.currentId=null;
-    }else if(action==='restore'){
-     store.documents[id]=jsonCopy(store.planTrashDocuments[id].document);
-     delete store.planDeletedDocuments[id];delete store.planTrashDocuments[id];
-    }else{
-     delete store.planTrashDocuments[id];store.planDeletedDocuments[id]=new Date().toISOString();
-    }
-    }
-    store.draft=jsonCopy(data);
-    const text=JSON.stringify(plansCurrent(),null,2);touched=true;await folderFileWrite(namePlans,text);
-    if(folder!==planFolderHandle||await folderFileRead(namePlans)!==text)throw Error('계획서 목록 저장 확인 실패');
-    await finishImport(action==='restore'?'계획서 복원 완료':action==='purge'?'계획서 완전삭제 완료':'삭제 계획서 목록으로 이동 완료');
-    plan68Remember();window.plan75RenderTrash?.();return true;
-   }catch(e){
-    rollback(before);persist();await plan66FlushPersistence();
-    if(touched)try{if(prior===null)await folder.removeEntry(namePlans);else{await folderFileWrite(namePlans,prior);if(await folderFileRead(namePlans)!==prior)throw Error('복구 확인 실패')}}catch(err){throw Error(e.message+' · 폴더 복구 확인 필요: '+err.message)}
-    throw e;
-   }finally{planFolderPaused=wasPaused}
-  });
- }
- function trashAction(id,action){return changePlanTrash(id,action).catch(e=>{console.error(e);alert('계획서 처리 실패: '+e.message);return false})}
- window.plan48RemoveDocument=id=>trashAction(id,'delete');
- window.plan75RestoreDocument=id=>trashAction(id,'restore');
- window.plan75PurgeDocument=id=>trashAction(id,'purge');
- window.plan76BulkAction=(ids,action)=>trashAction(ids,action);
  const origSavePlans=window.plan64SavePlans,origLoadPlans=window.plan64LoadPlans;
  window.plan64SavePlans=()=>safeAction('계획서 목록 저장',origSavePlans);
  window.plan64LoadPlans=()=>safeAction('계획서 목록 불러오기',origLoadPlans);
@@ -7202,7 +7082,8 @@ if(settingsTree){
 })();
 </script>
 <script id="plan66-storage-startup">
-plan66InitializeStorage();
+// Do not restore/open document data until the registered device is approved by the server.
+window.plan73StartStorage=()=>plan66InitializeStorage();
 </script>
 
 <script id="plan67-requested-controls">
@@ -7292,44 +7173,26 @@ plan66InitializeStorage();
  const ENDPOINT='https://script.google.com/macros/s/AKfycbxtaG1jP-Ph0s7QUkLrk7LYjQCQQFoEWuybyi3_6fmWt6TbhvT__8-1TgYof4aotLG-/exec';
  const DEVICE_KEY='safeplan_server_device_v1';
  const panel=document.createElement('section');panel.id='plan70ServerPanel';
- panel.innerHTML=`<h3 id="plan74Heading">서버 백업 · 기기등록</h3>
- <p id="plan71MasterHint" class="plan70-hint" hidden>처음 마스터 등록은 Apps Script 편집기에서 <code>createMasterRegistrationCode</code>를 한 번 실행합니다. 그다음부터 일반 기기는 마스터가 발급한 16자리 일회용 코드로 등록합니다.</p>
- <p id="plan71UserHint" class="plan70-hint">관리자에게 받은 등록코드를 입력해 기기를 등록하세요.</p>
- <div id="plan74Registration" class="plan70-code-row"><input type="text" id="plan70Label" autocomplete="off" maxlength="60" placeholder="기기 표시 이름 (예: 현장 PC)"><input type="text" id="plan70Code" autocomplete="off" maxlength="19" placeholder="10분 유효 등록코드"><button class="btn" type="button" id="plan70Register">기기 등록</button></div>
- <div id="plan74ComputerName" hidden></div>
- <div id="plan74ServerManagement" hidden>
- <div class="plan70-controls"><button type="button" id="plan70Check">기기 권한 확인</button><button type="button" id="plan70Backup">서버 백업</button><button type="button" id="plan70List">백업 목록</button><button type="button" id="plan70Restore">서버 백업 불러오기</button><button type="button" id="plan70Verify">선택 백업 시험 복원 검증</button></div>
+ panel.innerHTML=`<h3>서버 백업 · 기기등록</h3>
+ <p class="plan70-hint">처음 마스터 등록은 Apps Script 편집기에서 <code>createMasterRegistrationCode</code>를 한 번 실행합니다. 그다음부터 일반 기기는 마스터가 발급한 16자리 일회용 코드로 등록합니다.</p>
+ <div class="plan70-code-row"><input type="text" id="plan70Label" autocomplete="off" maxlength="60" placeholder="기기 표시 이름 (예: 현장 PC)"><input type="text" id="plan70Code" autocomplete="off" maxlength="19" placeholder="10분 유효 등록코드"><button class="btn" type="button" id="plan70Register">기기 등록</button></div>
+ <div class="plan70-controls"><button type="button" id="plan70Check">기기 권한 확인</button><button type="button" id="plan70Backup">서버 백업</button><button type="button" id="plan70List">백업 목록</button><button type="button" id="plan70Verify">선택 백업 시험 복원 검증</button></div>
  <select aria-label="서버 백업 목록" id="plan70Backups"><option value="">완료된 서버 백업을 조회하세요</option></select>
  <div role="status" id="plan70Status"></div>
- </div>
  <div id="plan71Master" hidden>
    <h4>마스터 · 기기별 권한 관리</h4>
    <div class="plan70-controls"><label for="plan71NewRole">신규 기기 권한</label><select id="plan71NewRole"><option value="editor">서버 백업·조회</option><option value="viewer">서버 조회 전용</option></select><button id="plan71Issue" type="button">1회용 등록코드 발급</button><button id="plan71Reload" type="button">등록기기 조회</button></div>
    <div id="plan71CodeResult" class="plan71-code" aria-live="polite"></div>
    <div id="plan71DeviceList" class="plan71-list"></div>
-   <p class="plan70-hint">기기 사용중지를 선택하면 서버 백업 접근이 차단됩니다. 서버에 이미 저장된 백업과 PC 폴더 자료는 지우지 않습니다. PC 로컬 파일의 열람 권한을 이 기능만으로 통제할 수는 없습니다.</p>
+   <p class="plan70-hint">기기 사용중지를 선택하면 공식 웹프로그램의 계획서 조회·수정·저장 화면도 잠깁니다. 서버에 이미 저장된 백업과 PC 폴더 자료는 지우지 않습니다. PC 로컬 파일의 열람 권한을 이 기능만으로 통제할 수는 없습니다.</p>
  </div>
- <div id="plan74ServerHint" class="plan70-hint">로컬 저장 폴더와 서버 백업은 별개입니다. 서버 기기등록용 토큰만 브라우저에 보관합니다. 백업은 사용자가 누를 때만 실행되고, 시험 복원 검증은 저장된 자료를 바꾸지 않습니다.</div>`;
+ <div class="plan70-hint">로컬 저장 폴더와 서버 백업은 별개입니다. 서버 기기등록용 토큰만 브라우저에 보관합니다. 백업은 사용자가 누를 때만 실행되고, 시험 복원 검증은 저장된 자료를 바꾸지 않습니다.</div>`;
  const settings=document.getElementById('planDataPane_settings');
  if(settings)settings.prepend(panel);else document.getElementById('planInputPanel')?.append(panel);
  const $70=id=>document.getElementById(id);let busy=false;
- const topSave=[...document.querySelectorAll('button')].find(b=>(b.getAttribute('onclick')||'').includes('saveCurrentIntoPlanFolder'));
- const topBackup=document.createElement('button');topBackup.type='button';topBackup.id='plan72TopBackup';topBackup.className=topSave?.className||'btn';topBackup.textContent='서버 백업';topBackup.hidden=true;
- if(topSave)topSave.before(topBackup);
- topBackup.onclick=()=>{if(!busy)$70('plan70Backup').click()};
  let confirmedRole=null;
- const roleName=role=>role==='master'?'마스터':role==='viewer'?'서버 조회 전용':'서버 백업·조회';
- function markRole(role,label){
-  confirmedRole=role;const master=role==='master',registered=['master','editor','viewer'].includes(role);
-  $70('plan71Master').hidden=!master;$70('plan71MasterHint').hidden=!master;
-  $70('plan74ServerManagement').hidden=!master;$70('plan74ServerHint').hidden=!master;topBackup.hidden=!master;
-  $70('plan74Heading').hidden=registered&&!master;
-  $70('plan74Registration').hidden=registered&&!master;$70('plan71UserHint').hidden=registered;
-  $70('plan74ComputerName').hidden=!registered||master;
-  const c=credentials();$70('plan74ComputerName').textContent=label||c?.deviceLabel||'이름 미등록 기기';
-  $70('plan70Backup').disabled=busy||role==='viewer';topBackup.disabled=busy||role==='viewer';
-  if(registered&&label&&c&&c.deviceLabel!==label){try{localStorage.setItem(DEVICE_KEY,JSON.stringify({...c,deviceLabel:label}))}catch(e){console.warn('기기 이름 보관 실패',e)}}
- }
+ const roleName=role=>role==='master'?'마스터':role==='viewer'?'조회 전용':'작성·수정·백업';
+ function markRole(role){confirmedRole=role;$70('plan71Master').hidden=role!=='master';$70('plan70Backup').disabled=role==='viewer';}
 
  function status(message){$70('plan70Status').textContent=message}
  function credentials(){try{const obj=JSON.parse(localStorage.getItem(DEVICE_KEY)||'null');return obj&&obj.deviceId&&obj.deviceToken?obj:null}catch(_){return null}}
@@ -7358,22 +7221,30 @@ plan66InitializeStorage();
   throw Error('응답 확인 기한이 지났습니다. 동일 백업을 반복 저장하지 말고 서버 백업 목록을 먼저 확인하세요.');
  }
  function authorized(action,more={}){const c=credentials();if(!c)throw Error('먼저 등록코드를 입력하여 기기를 등록하세요.');return serverRequest(action,{deviceId:c.deviceId,deviceToken:c.deviceToken,...more})}
+ // Only the registration token is locally stored; each approval is decided on the server.
+ window.plan73RemotePing=()=>authorized('ping');
  async function checkAccess(){const c=credentials();if(!c){markRole(null);status('미등록 기기 · 마스터에게 등록코드를 요청하세요.');return null;}
-  try{const r=await authorized('ping');markRole(r.role,r.deviceLabel);status('등록 기기 확인 완료 · '+r.userName+' · '+roleName(r.role));return r;}
+  try{const r=await authorized('ping');markRole(r.role);status('등록 기기 확인 완료 · '+r.userName+' · '+roleName(r.role));return r;}
   catch(e){markRole(null);status('서버 기기인증 실패: '+e.message+' · 관리자에게 문의하세요.');return null;}}
 
- async function run(message,callback){if(busy)return;busy=true;topBackup.disabled=true;panel.querySelectorAll('button').forEach(b=>b.disabled=true);status(message);
-  try{await callback()}catch(e){console.error('서버 백업 작업 오류',e);status('실패: '+e.message);alert('서버 백업 오류: '+e.message)}finally{busy=false;panel.querySelectorAll('button').forEach(b=>b.disabled=false);markRole(confirmedRole)}
+ async function run(message,callback){if(busy)return;busy=true;panel.querySelectorAll('button').forEach(b=>b.disabled=true);status(message);
+  try{await callback()}catch(e){console.error('서버 백업 작업 오류',e);status('실패: '+e.message);alert('서버 백업 오류: '+e.message)}finally{busy=false;panel.querySelectorAll('button').forEach(b=>b.disabled=false);if(confirmedRole==='viewer')$70('plan70Backup').disabled=true}
  }
- const c=credentials();status(c?'기기 인증 확인 중…':'기기 미등록 · 마스터에게 16자리 등록코드를 요청하세요.');if(c){$70('plan74Registration').hidden=true;$70('plan71UserHint').hidden=true;$70('plan74Heading').hidden=true;$70('plan74ComputerName').hidden=false;$70('plan74ComputerName').textContent=c.deviceLabel||'기기 확인 중…';checkAccess()}
+ const c=credentials();status(c?'기기 인증 확인 중…':'기기 미등록 · 마스터에게 16자리 등록코드를 요청하세요.');if(c)checkAccess();
  $70('plan70Register').onclick=()=>run('등록코드 확인 중…',async()=>{
   if(credentials()&&!confirm('이 HTML에 이미 등록된 기기가 있습니다. 새 기기로 다시 등록할까요? 기존 등록정보를 바꾸려는 경우에만 확인하세요.'))return;
-  const code=$70('plan70Code').value.replace(/\s/g,'').toUpperCase();if(!/^[A-F0-9]{16}$/.test(code))throw Error('관리자에게 받은 16자리 등록코드를 입력하세요.');
+  if(!planFolderHandle)throw Error('먼저 [저장 폴더 지정]을 눌러 PC 저장 폴더를 선택하세요.');
+  const code=$70('plan70Code').value.replace(/\s/g,'').toUpperCase();if(!/^[A-F0-9]{16}$/.test(code))throw Error('Apps Script에서 발급한 16자리 등록코드를 입력하세요.');
   const id='d_'+randomHex(12),label=$70('plan70Label').value.trim()||('브라우저 / '+new Date().toLocaleDateString('ko-KR'));
   const result=await serverRequest('registerDevice',{deviceId:id,deviceLabel:label,registrationCode:code});
-  const record={deviceId:result.deviceId,deviceToken:result.deviceToken,userId:result.userId,userName:result.userName,deviceLabel:result.deviceLabel||label};
+  const record={deviceId:result.deviceId,deviceToken:result.deviceToken,userId:result.userId,userName:result.userName};
   try{localStorage.setItem(DEVICE_KEY,JSON.stringify(record))}catch(e){throw Error('기기 등록 성공 후 브라우저에 저장하지 못했습니다. 새 등록코드를 발급받아야 할 수 있습니다.')}
-  $70('plan70Code').value='';markRole(result.role,result.deviceLabel||label);status('기기 등록 완료 · '+result.userName+' · '+roleName(result.role)+'\n등록 토큰만 현재 브라우저에 보관합니다.');
+  // The legacy server-backup-only role is not sufficient: unlock the application first.
+  if(typeof window.plan73AuthorizeNewDevice==='function')await window.plan73AuthorizeNewDevice();
+  $70('plan70Code').value='';markRole(result.role);status('기기 등록 완료 · '+result.userName+' · '+roleName(result.role)+'\n등록 토큰만 현재 브라우저에 보관합니다.');
+  if(typeof window.plan72FinalizeRegistration==='function'){
+   try{await window.plan72FinalizeRegistration()}catch(seedError){console.error('기기 등록 후 폴더 초기화 실패',seedError);status('기기 등록 완료 · 샘플 준비 실패: '+seedError.message+'\n저장 폴더의 기존 파일은 삭제하지 않았습니다. 설정에서 폴더를 확인해 주세요.');window.plan72RegisteredButSeedFailed?.(seedError.message)}
+  }
  });
  $70('plan70Check').onclick=()=>run('기기 권한 확인 중…',async()=>{await checkAccess()});
  async function deviceList(){const r=await authorized('adminListDevices');const wrap=$70('plan71DeviceList');wrap.replaceChildren();
@@ -7384,7 +7255,7 @@ plan66InitializeStorage();
    for(const label of [d.label,d.createdAt?.slice(0,10)||'',roleName(d.role),d.revoked?'사용중지':'활성']){const td=document.createElement('td');td.textContent=label;if(d.revoked)td.classList.add('plan71-disabled');tr.append(td)}
    const actions=document.createElement('td');
    if(d.isMaster){actions.textContent='마스터';}
-   else {const role=document.createElement('select');for(const [value,title] of [['editor','백업·조회'],['viewer','조회 전용']]){const o=document.createElement('option');o.value=value;o.textContent=title;role.append(o)}role.value=d.role==='viewer'?'viewer':'editor';
+   else {const role=document.createElement('select');for(const [value,title] of [['editor','작성·수정·백업'],['viewer','조회 전용']]){const o=document.createElement('option');o.value=value;o.textContent=title;role.append(o)}role.value=d.role==='viewer'?'viewer':'editor';
     role.onchange=()=>run('권한 변경 중…',async()=>{await authorized('adminSetDevice',{targetDeviceId:d.deviceId,role:role.value});await deviceList();status('기기 권한 변경 완료')});
     const toggle=document.createElement('button');toggle.type='button';toggle.textContent=d.revoked?'사용 재개':'사용 중지';toggle.onclick=()=>{if(!confirm('['+d.label+'] 기기의 서버 백업 사용을 '+(d.revoked?'재개':'중지')+'할까요? 기존 자료는 삭제하지 않습니다.'))return;
      run('기기 사용 상태 변경 중…',async()=>{await authorized('adminSetDevice',{targetDeviceId:d.deviceId,revoked:!d.revoked});await deviceList();status('기기 사용 상태 변경 완료')})};
@@ -7406,8 +7277,7 @@ plan66InitializeStorage();
   const bytes=new TextEncoder().encode(JSON.stringify(snapshot)).length;
   if(bytes>12*1024*1024)throw Error('사진 포함 백업 자료가 서버 제한(12MiB)을 초과했습니다. 기존 자료는 유지됩니다.');
   const backupId='b_'+randomHex(14),result=await authorized('backupSave',{backupId,snapshot});
-  try{await listBackups();$70('plan70Backups').value=result.backup.backupId}catch(e){console.warn('백업 완료 후 목록 조회 보류:',e)}
-  status('서버 백업 완료 · '+result.backup.backupId+'\n사진 포함 '+result.backup.totalBytes.toLocaleString()+'바이트.\n'+(result.retention?.warning?'오래된 백업 정리 미완료: '+result.retention.warning:'최신 10건 유지 · 오래된 백업 '+(result.retention?.deleted||0)+'건 완전삭제'));
+  status('서버 백업 완료 · '+result.backup.backupId+'\n사진 포함 '+result.backup.totalBytes.toLocaleString()+'바이트. 기존 로컬 자료는 유지됩니다.');
  });
  async function listBackups(){const result=await authorized('backupList',{offset:0,limit:50});const select=$70('plan70Backups');select.replaceChildren();
   for(const backup of result.backups||[]){const option=document.createElement('option');option.value=backup.backupId;option.textContent=String(backup.savedAt||'')+' · '+backup.backupId+' · '+Number(backup.totalBytes||0).toLocaleString()+'B';select.append(option)}
@@ -7416,65 +7286,568 @@ plan66InitializeStorage();
  }
  $70('plan70List').onclick=()=>run('백업 목록 조회 중…',async()=>{const count=await listBackups();status('완료된 백업 '+count+'개 조회 · 최신 50개까지 표시')});
  const hexBuffer=buf=>Array.from(new Uint8Array(buf),b=>b.toString(16).padStart(2,'0')).join('');
- function downloadBackup(params){return new Promise((resolve,reject)=>{
-  const callback='plan74cb_'+randomHex(7),script=document.createElement('script');let finished=false;
-  const done=(error,result)=>{if(finished)return;finished=true;clearTimeout(timer);script.remove();delete window[callback];if(error)reject(error);else if(!result?.ok)reject(Error(result?.error||'다운로드 거부'));else resolve(result)};
-  window[callback]=result=>done(null,result);
-  const timer=setTimeout(()=>done(Error('다운로드 응답 시간 초과 · 다시 불러오기를 실행하세요.')),120000);
-  script.onerror=()=>done(Error('다운로드 연결 실패'));script.referrerPolicy='no-referrer';
-  const query=new URLSearchParams({action:'backupDownload',...params,callback});script.src=ENDPOINT+'?'+query.toString();document.head.append(script);
- })}
- async function readVerifiedBackup(){
+ $70('plan70Verify').onclick=()=>run('서버 백업 조각 및 무결성 검사 중… (로컬 자료 변경 없음)',async()=>{
   const id=$70('plan70Backups').value;if(!id)throw Error('먼저 [백업 목록]을 누르고 검사할 백업을 선택하세요.');
-  if(!crypto.subtle)throw Error('브라우저 보안 검증 기능을 사용할 수 없습니다.');
-  const c=credentials();if(!c)throw Error('등록 기기 인증이 필요합니다.');
-  const encoder=new TextEncoder(),tokenHash=hexBuffer(await crypto.subtle.digest('SHA-256',encoder.encode(c.deviceToken)));
-  const signingKey=await crypto.subtle.importKey('raw',encoder.encode(tokenHash),{name:'HMAC',hash:'SHA-256'},false,['sign']);
-  const nonce=randomHex(16),timestamp=String(Date.now()),message=['backupDownload',c.deviceId,id,nonce,timestamp].join('|');
-  const signature=hexBuffer(await crypto.subtle.sign('HMAC',signingKey,encoder.encode(message)));
-  status('서버 백업 받는 중…');
-  const result=await downloadBackup({deviceId:c.deviceId,backupId:id,nonce,timestamp,signature});
-  if(result.backupId!==id||result.nonce!==nonce||!Number.isSafeInteger(result.totalBytes)||result.totalBytes<1||result.totalBytes>12*1048576)throw Error('서버 다운로드 정보 오류 · 서버 배포 버전을 확인하세요.');
-  status('서버 백업 검증 중…');
+  if(!crypto.subtle)throw Error('브라우저의 보안 해시 기능을 사용할 수 없습니다.');
+  const result=await authorized('backupManifest',{backupId:id}),manifest=result.backup;
+  if(!manifest?.complete||manifest.backupId!==id)throw Error('완료되지 않은 백업입니다.');
   const restored={};let sum=0;
   for(const part of ['settings','registry','plans','draft']){
-   const meta=result.parts?.[part];if(!meta||typeof meta.text!=='string'||!Number.isSafeInteger(meta.bytes)||meta.bytes<1||!/^[a-f0-9]{64}$/.test(meta.sha256))throw Error('백업 항목 정보 오류: '+part);
-   const bytes=encoder.encode(meta.text);sum+=bytes.length;
-   if(bytes.length!==meta.bytes||sum>result.totalBytes)throw Error(part+' 바이트 길이 불일치');
-   if(hexBuffer(await crypto.subtle.digest('SHA-256',bytes))!==meta.sha256)throw Error(part+' 무결성 검증 실패');
-   restored[part]=JSON.parse(meta.text);delete result.parts[part];
+   const meta=manifest.parts?.[part];if(!meta||!Number.isInteger(meta.chunks)||meta.chunks<1)throw Error(part+' 백업 정보가 누락되었습니다.');
+   const pieces=[];let total=0;
+   for(let i=0;i<meta.chunks;i++){
+    status(part+' 검증: '+(i+1)+'/'+meta.chunks+' 조각 (로컬 변경 없음)');
+    const r=await authorized('backupReadChunk',{backupId:id,part,index:i});
+    if(r.backupId!==id||r.part!==part||r.index!==i)throw Error('백업 조각 정보 불일치');
+    const binary=atob(r.chunk),buf=new Uint8Array(binary.length);for(let j=0;j<binary.length;j++)buf[j]=binary.charCodeAt(j);
+    pieces.push(buf);total+=buf.length;
+   }
+   if(total!==meta.bytes)throw Error(part+' 바이트 길이 불일치');
+   const bytes=new Uint8Array(total);let offset=0;for(const b of pieces){bytes.set(b,offset);offset+=b.length}
+   const hash=hexBuffer(await crypto.subtle.digest('SHA-256',bytes));if(hash!==meta.sha256)throw Error(part+' 무결성 검증 실패');
+   restored[part]=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));sum+=total;
   }
-  if(sum!==result.totalBytes)throw Error('백업 전체 길이 불일치');
   if(!restored.plans?.documents||!Array.isArray(restored.registry?.persons)||!Array.isArray(restored.registry?.equipment)||!Array.isArray(restored.registry?.cargo))throw Error('복원 자료 형식이 올바르지 않습니다.');
-  return {id,restored,sum};
- }
- $70('plan70Verify').onclick=()=>run('서버 백업 검증 중… (로컬 자료 변경 없음)',async()=>{
-  const {id,restored,sum}=await readVerifiedBackup();
   status('시험 복원 검증 성공 · '+id+'\n자료 4종 · '+sum.toLocaleString()+'바이트 · 저장 문서 '+Object.keys(restored.plans.documents).length+'건\n기존 로컬 데이터와 사진은 변경하지 않았습니다.');
- });
- $70('plan70Restore').onclick=()=>run('서버 백업을 검증하는 중…',async()=>{
-  const {id,restored}=await readVerifiedBackup();
-  if(!confirm('서버 백업 ['+id+']의 설정·인력·장비·계획서·사진을 불러올까요?\n현재 자료는 지정 폴더의 복구백업으로 먼저 보관합니다. 서버 원본은 변경하지 않습니다.'))return;
-  if(!await window.plan72ApplyServerBackup(restored))return;
-  status('서버 백업 불러오기 완료 · '+id+'\n지정 폴더 저장 및 다시 읽기 확인 완료');
  });
 })();
 </script>
-<style>
-#planInputPanel .plan76-search-actions{display:flex;align-items:end;gap:5px;flex-wrap:wrap}
-@media(max-width:600px){#planInputPanel .plan76-search-actions{grid-column:1/-1}}
-#planInputPanel .plan76-bulk-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 0;color:#174e7f}
-#planInputPanel .plan76-bulk-controls label{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
-#planInputPanel .plan76-bulk-controls input,#planInputPanel .plan45-table input[data-plan-select]{width:16px;height:16px;min-height:0;cursor:pointer}
-#planInputPanel #plan75TrashButton{white-space:nowrap}
+<style id="plan72-onboarding-style">
+#plan72Gate[hidden]{display:none!important}
+#plan72Gate{position:fixed;z-index:2147482900;inset:0;display:flex;justify-content:center;align-items:center;background:#f3f7fc;padding:20px}
+#plan72Card{width:min(95vw,490px);max-height:95dvh;overflow:auto;background:#fff;border:1px solid #d3e1ef;border-radius:14px;box-shadow:0 12px 40px #1834521a;padding:24px;color:#17365b}
+#plan72Card h2{font-size:21px;margin:0 0 7px;color:#14375c}
+#plan72Card p{font-size:12px;line-height:1.65;color:#63758d;margin:5px 0 12px}
+#plan72Card label{display:block;margin-top:11px;font-size:12px;font-weight:800}
+#plan72Card input{display:block;width:100%;font-size:15px;padding:11px;border:1px solid #c3d3e4;border-radius:7px;margin:5px 0;box-sizing:border-box}
+#plan72Card button{border:1px solid #9dc5f7;border-radius:7px;background:#fff;color:#0672e8;padding:10px 12px;font-weight:800;cursor:pointer}
+#plan72Card .primary{background:#0878f9;color:#fff;border-color:#0878f9}
+#plan72Card #plan72Submit{width:100%;margin-top:12px}
+#plan72FolderStatus{color:#28537c;background:#f0f6fd;padding:9px;border-radius:6px;font-size:12px;line-height:1.5}
+#plan72Msg{white-space:pre-wrap;color:#944424;line-height:1.5;font-size:12px;min-height:20px;margin-top:10px}
+#plan72PathTree{border:1px solid #d7e3ef;background:#f8fbff;border-radius:6px;padding:7px 10px;font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+#plan72PathTree[hidden]{display:none!important}
+.plan72-num{min-width:36px!important;width:36px!important;max-width:36px!important;text-align:center!important;white-space:nowrap!important;font-variant-numeric:tabular-nums!important}
+#planDataPane_settings #plan72FolderPathRow{padding:8px 10px;margin:7px 0;border:1px solid #dbe6f2;border-radius:7px}
+#plan72FolderPathRow label{font-size:12px;font-weight:700;display:block;margin-bottom:5px}
+#plan72FolderPathRow input{width:100%;border:1px solid #cbd9e8;border-radius:5px;padding:7px;font-size:12px;box-sizing:border-box}
+#plan72FolderPathRow small{font-size:11px;color:#677890;display:block;margin-top:6px}
+@media(max-width:600px){#plan72Card{padding:15px}#plan72Card h2{font-size:18px}}
+@media print{#plan72Gate{display:none!important}}
 </style>
-<script>
+<script id="plan72-onboarding-and-row-numbering">
+'use strict';
+/* 신규 기기: 최초 폴더 선택과 안전한 빈 저장소 샘플. 기존 폴더는 절대 덮어쓰지 않는다. */
 (()=>{
- const search=document.getElementById('plan45Apply');if(!search)return;
- const button=document.createElement('button');button.type='button';button.className='btn';button.id='plan75TrashButton';button.textContent='삭제 계획서 보기';button.setAttribute('aria-pressed','false');search.after(button);
- window.plan76TrashMode=false;
- button.onclick=()=>{window.plan76TrashMode=!window.plan76TrashMode;button.textContent=window.plan76TrashMode?'일반 계획서 보기':'삭제 계획서 보기';button.setAttribute('aria-pressed',String(window.plan76TrashMode));window.plan76ChangeListMode()};
- window.plan75RenderTrash=()=>plan18RenderDocuments('search');
+ const $72=id=>document.getElementById(id);
+ const g=document.createElement('section');g.id='plan72Gate';g.hidden=true;g.setAttribute('role','dialog');g.setAttribute('aria-modal','true');g.setAttribute('aria-labelledby','plan72Heading');
+ g.innerHTML=`<div id="plan72Card">
+ <h2 id="plan72Heading">🔐 안전 작업계획서 · 최초 기기등록</h2>
+ <p>마스터가 발급한 16자리 등록코드로 이 기기를 등록합니다. 먼저 PC 저장 폴더를 지정해 주세요.</p>
+ <label for="plan72Name">기기 이름</label><input id="plan72Name" placeholder="예: 현장사무실 PC" maxlength="60" autocomplete="off">
+ <label for="plan72Code">16자리 기기 등록코드</label><input id="plan72Code" placeholder="마스터에게 받은 등록코드" maxlength="19" autocomplete="off" autocapitalize="characters">
+ <label>데이터 저장 폴더</label><button id="plan72Pick" type="button">📁 저장 폴더 지정</button>
+ <div id="plan72FolderStatus" role="status">저장 폴더를 아직 선택하지 않았습니다.</div>
+ <p>저장 폴더는 나중에 <b>설정 → 데이터 저장 폴더 관리</b>에서 변경할 수 있습니다. 기존 폴더 자료는 자동으로 삭제하거나 덮어쓰지 않습니다.</p>
+ <button class="primary" id="plan72Submit" type="button">기기 등록</button><div id="plan72Msg" aria-live="polite"></div>
+ </div>`;
+ document.body.append(g);
+ const CRED_KEY='safeplan_server_device_v1', PATH_KEY='safeplan_folder_display_path_v1';
+ const cred=()=>{try{let a=JSON.parse(localStorage.getItem(CRED_KEY)||'null');return a&&a.deviceId&&a.deviceToken?a:null}catch(_){return null}};
+ let registered=false;
+ function setFolderText(){const e=$72('plan72FolderStatus');if(!e)return;e.textContent=planFolderHandle?'선택된 폴더: '+planFolderHandle.name+' (폴더 내용 확인 후 저장)':'저장 폴더를 아직 선택하지 않았습니다.';}
+ function setGate(isOpen){g.hidden=!isOpen;if(isOpen){setFolderText();$72('plan72Name').focus();}}
+ $72('plan72Pick').onclick=async()=>{
+  $72('plan72Msg').textContent='';
+  try{await choosePlanFolder();setFolderText()}catch(e){$72('plan72Msg').textContent=e.message}
+ };
+ $72('plan72Submit').onclick=async()=>{
+  if(!planFolderHandle){$72('plan72Msg').textContent='먼저 저장 폴더를 선택해 주세요.';return}
+  const name=$72('plan72Name').value.trim(),code=$72('plan72Code').value.trim();
+  if(!name||!/^[A-F0-9]{16}$/i.test(code)){$72('plan72Msg').textContent='기기 이름과 16자리 등록코드를 입력해 주세요.';return}
+  const realName=$72('plan70Label'),realCode=$72('plan70Code'),btn=$72('plan70Register');
+  realName.value=name;realCode.value=code;btn.click();$72('plan72Msg').textContent='서버 기기등록 요청 중…';
+ };
+ async function exists(name){try{await planFolderHandle.getFileHandle(name);return true}catch(e){if(e.name==='NotFoundError')return false;throw e}}
+ const NAMES=['안전작업계획서_전체데이터.json','안전작업계획서_기준설정.json','안전작업계획서_계획서목록.json','20261023-1.json'];
+ async function folderContainsUserData(){
+  for await(const [name] of planFolderHandle.entries())if(/\.json$/i.test(name))return true;
+  return false;
+ }
+ async function writeNew(name,obj){
+  if(await exists(name))throw Error('동시에 같은 이름의 파일이 발견되어 샘플 저장을 중단했습니다: '+name);
+  const h=await planFolderHandle.getFileHandle(name,{create:true}),w=await h.createWritable();
+  try{await w.write(JSON.stringify(obj,null,2));await w.close()}catch(e){try{await w.abort()}catch(_e){}throw e}
+  const saved=JSON.parse(await(await h.getFile()).text());
+  if(saved?.project!=='안전-작업계획서')throw Error('저장 파일 검증 실패: '+name);
+ }
+ async function seedEmptyFolder(){
+  // Existing local drafts and all registered records must remain unchanged.
+  if(Object.keys(store.documents||{}).length || masters.persons.length || masters.equipment.length || masters.cargo.length || (store.plan45Gallery?.items||[]).length){
+   return '현재 브라우저에 이전 작업 자료가 있어 샘플 자동 생성을 생략했습니다. 기존 자료를 지정 폴더에 안전하게 백업한 뒤 확인해 주세요.';
+  }
+  if(await folderContainsUserData())return '선택한 폴더에 이미 JSON 자료가 있어 샘플을 생성하지 않았습니다. 설정에서 기존 자료 불러오기를 진행해 주세요.';
+  const date='2026-10-23',now=new Date().toISOString(),personId='sample_person_20261023',equipmentId='sample_equip_20261023';
+  const person={id:personId,name:'샘플_홍길동',address:'',phone:'',phone2:'',birth:'',firstDate:'',qualification:'',org:'',position:'',role:'',roles:[],note:'',photo:'',extraFields:{}};
+  const machine={id:equipmentId,name:'고소작업대(수직)',model:'JCPT0807AC (D934)',performance:'총적재능력 : 0.272T, 7.8m / 장비제원 첨부',intake:'2026-08-28',qualificationLicense:'',extraFields:{}};
+  const doc=plan65RuntimeDoc(empty());Object.assign(doc,{id:'20261023-1',writtenDate:date,planTitle:'샘플 계획서',createdAt:now,updatedAt:now,persons:[personId],equipment:[equipmentId],cargo:[]});
+  // Create files from snapshots first; only apply in-memory state after all files are saved.
+  const prevPersons=masters.persons,prevEquipment=masters.equipment,prevDocs=store.documents,prevDraft=store.draft,prevCurrent=store.currentId,prevData=data;
+  const prevGallery=store.plan45Gallery;
+  try{
+   masters.persons=[person];masters.equipment=[machine];store.documents={'20261023-1':structuredClone(doc)};store.draft=structuredClone(doc);store.currentId=doc.id;data=doc;
+   // Hide built-in example images for a brand-new sample workspace; original embedded resources remain untouched.
+   const hidden=typeof plan45GalleryItems==='function'?plan45GalleryItems().filter(x=>x.isSeed).map(x=>x.id):[];
+   store.plan45Gallery={hidden,items:[],notes:{}};
+   const base={project:'안전-작업계획서',version:3,savedAt:now};
+   const combined={...base,kind:'settings-and-plans',store:plan17ReportSnapshot(),settings:plan17ReferenceSnapshot(true),masters:plan17RegisteredMastersSnapshot(true)};
+   const settings={...base,kind:'reference-settings',settings:plan17ReferenceSnapshot(true)};
+   const plans={...base,kind:'plans',store:plan17ReportSnapshot()};
+   const detail={project:'안전-작업계획서',id:doc.id,savedAt:now,document:structuredClone(doc)};
+   for(const [name,payload] of [[NAMES[0],combined],[NAMES[1],settings],[NAMES[2],plans],[NAMES[3],detail]])await writeNew(name,payload);
+   planFolderPaused=false;plan17SettingsFolderReady=true;
+   fillFields();plan18RenderAllDocuments();if(typeof window.plan50RefreshGallery==='function')window.plan50RefreshGallery();
+   if(!persist()||!await plan66FlushPersistence())throw Error('PC 저장 폴더의 샘플 자료 저장 검증 실패');
+   planFolderState('새 폴더 · 기본 샘플 1건/인력 1명/장비 1대 저장 완료');
+   return '빈 저장 폴더에 기본 샘플 계획서 1건·인력 1명·장비 1대를 생성했습니다.';
+  }catch(e){
+   masters.persons=prevPersons;masters.equipment=prevEquipment;store.documents=prevDocs;store.draft=prevDraft;store.currentId=prevCurrent;data=prevData;store.plan45Gallery=prevGallery;
+   throw e;
+  }
+ }
+ window.plan72RegisteredButSeedFailed=message=>{setGate(false);alert('기기 등록은 완료됐지만 저장 폴더 초기화에 문제가 있습니다.\n'+message+'\n기존 저장파일은 삭제하지 않았습니다. 설정에서 폴더를 확인해 주세요.')};
+ window.plan72FinalizeRegistration=async()=>{
+  if(!planFolderHandle)throw Error('저장 폴더 선택 상태를 확인하지 못했습니다.');
+  if(!await planFolderPermission(false))throw Error('저장 폴더 접근 권한을 다시 승인해 주세요.');
+  const note=await seedEmptyFolder();registered=true;setGate(false);$72('plan72Msg').textContent='';
+  const status=$72('plan70Status');if(status)status.textContent+='\n'+note;
+ };
+ function updateFolderPathTree(){
+  const tree=$72('plan72PathTree'),input=$72('plan72FolderFullPath');if(!tree||!input)return;
+  let p=input.value.trim().replace(/\//g,'\\');
+  if(!p){tree.hidden=true;return}
+  const actualName=planFolderHandle?.name;
+  if(actualName&&p.split('\\').filter(Boolean).slice(-1)[0]!==actualName){tree.hidden=false;tree.textContent='입력된 마지막 폴더명과 실제 선택 폴더명이 다릅니다. 경로를 확인하세요.';return}
+  tree.replaceChildren();tree.hidden=false;
+  for(const [i,seg] of p.split('\\').filter(Boolean).entries()){
+   const div=document.createElement('div');div.style.paddingLeft=(i*13)+'px';div.textContent=(i?'└ 📁 ':'💽 ')+seg;tree.append(div)
+  }
+ }
+ // A user-provided Windows path is only for display. Browsers do not reveal the actual full drive path.
+ function mountPathEditor(){
+  const host=$72('planFolderName')?.closest('.plan-folder-section');if(!host||$72('plan72FolderPathRow'))return;
+  const row=document.createElement('div');row.id='plan72FolderPathRow';
+  row.innerHTML='<label for="plan72FolderFullPath">선택한 저장 폴더의 전체 경로 표시 (선택사항)</label><input id="plan72FolderFullPath" type="text" placeholder="탐색기 주소창에서 경로를 복사해 붙여넣기"><small>보안상 브라우저는 C:\\부터의 전체 경로를 자동으로 읽지 못합니다. 이 경로는 표시용이며 실제 저장은 위 [폴더 지정] 권한을 사용합니다.</small><div id="plan72PathTree" hidden></div>';
+  host.append(row);
+  try{$72('plan72FolderFullPath').value=localStorage.getItem(PATH_KEY)||''}catch(_){}
+  $72('plan72FolderFullPath').addEventListener('input',()=>{try{localStorage.setItem(PATH_KEY,$72('plan72FolderFullPath').value.trim())}catch(_){}updateFolderPathTree()});updateFolderPathTree();
+ }
+  mountPathEditor();
+  // The initial registration screen must be usable before any document storage is loaded.
+  if(!cred())setGate(true);
+ // Append ordinal columns without replacing the existing data/rendering/selection handlers.
+ function prependNumbers(kind){
+  const body=$72(kind==='person'?'personRows':'equipmentRows'),table=body?.closest('table');if(!table)return;
+  const head=table.querySelector('thead tr');if(!head)return;
+  const prev=table.querySelector('th[data-plan72-number]');if(prev)prev.remove();
+  table.querySelectorAll('td[data-plan72-number]').forEach(x=>x.remove());
+  const colgroup=table.querySelector('colgroup');if(colgroup)colgroup.querySelector('col[data-plan72-number]')?.remove();
+  const th=document.createElement('th');th.textContent='번호';th.dataset.plan72Number='1';th.className='plan72-num';head.prepend(th);
+  const rows=[...body.querySelectorAll(':scope > tr')];let i=0;
+  for(const row of rows){
+   const placeholder=row.children.length===1&&row.children[0]?.hasAttribute('colspan');
+   if(placeholder){row.children[0].colSpan+=1;continue}
+   const td=document.createElement('td');td.dataset.plan72Number='1';td.className='plan72-num';td.textContent=String(++i);row.prepend(td)
+  }
+  if(colgroup){const col=document.createElement('col');col.dataset.plan72Number='1';col.style.width='38px';colgroup.prepend(col);const width=parseFloat(table.style.width);if(width)table.style.setProperty('width',(width+38)+'px','important');const min=parseFloat(table.style.minWidth);if(min)table.style.setProperty('min-width',(min+38)+'px','important');}
+ }
+ const oldPersons=renderPersons,oldEquipments=renderEquipments;
+ function unnumber(kind){
+  const body=$72(kind==='person'?'personRows':'equipmentRows'),table=body?.closest('table');if(!table)return;
+  table.querySelector('th[data-plan72-number]')?.remove();table.querySelectorAll('td[data-plan72-number]').forEach(e=>e.remove());
+  table.querySelector('col[data-plan72-number]')?.remove();
+ }
+ renderPersons=function(){unnumber('person');oldPersons();prependNumbers('person')};
+ renderEquipments=function(){unnumber('equipment');oldEquipments();prependNumbers('equipment')};
+ plan66Ready.then(()=>{renderPersons();renderEquipments()});
+})();
+</script>
+
+<script id="plan74-verified-plan-save">
+'use strict';
+/* Preserve existing records and photos: explicit "계획서 저장" means file save AND read-back.
+ * This does not delete old browser snapshots. Migration away from browser storage remains separate.
+ */
+(()=>{
+ const SAVED_LIST='안전작업계획서_계획서목록.json';
+ let writing=false;
+ const read=async name=>{try{return await(await(await planFolderHandle.getFileHandle(name)).getFile()).text()}
+  catch(e){if(e.name==='NotFoundError')return null;throw e}};
+ async function write(name,content){const h=await planFolderHandle.getFileHandle(name,{create:true});const w=await h.createWritable();
+  try{await w.write(content);await w.close()}catch(e){try{await w.abort()}catch(_e){}throw e}}
+ function samePictures(a,b){return JSON.stringify(a||[])===JSON.stringify(b||[])}
+ function verifyDocument(doc,expected){if(!doc||doc.id!==expected.id||!samePictures(doc.plan28Photos,expected.plan28Photos))throw Error('계획도 이미지가 저장 문서와 일치하지 않습니다. 원본 창을 닫지 마세요.')}
+ async function guardedBackup(name,oldText,newText){
+  if(oldText===null||oldText===newText)return;
+  const stem=name.replace(/\.json$/i,'');const date=new Date().toISOString().replace(/[-:TZ.]/g,'').slice(0,14);
+  let fname,idx=0;do{fname=stem+'_복구백업_'+date+(idx?'_'+idx:'')+'.json';idx++}while(await read(fname)!==null);
+  await write(fname,oldText);
+  if(await read(fname)!==oldText)throw Error('기존 자료 복구백업 검증 실패: '+fname);
+ }
+ async function verifyFolderAllowed(){
+  if(!planFolderHandle){alert('계획서가 PC 폴더에 저장되지 않았습니다. 먼저 설정에서 [폴더 지정]을 눌러 주세요. 현재 작성 화면은 그대로 유지됩니다.');return false}
+  if(!await planFolderPermission(true)){alert('계획서 폴더에 접근할 수 없습니다. [설정 → 접근 재승인] 후 저장해 주세요. 현재 작성 화면은 그대로 유지됩니다.');return false}
+  return true;
+ }
+ const previousSave=saveDocument;
+ saveDocument=async function(){
+  if(writing){toast('이전 계획서 저장이 진행 중입니다.');return false}
+  if(!await verifyFolderAllowed())return false;
+  writing=true;
+  const saveBtn=[...document.querySelectorAll('button')].find(b=>(b.getAttribute('onclick')||'').trim()==='saveDocument()');
+  const priorDisabled=saveBtn?.disabled;if(saveBtn)saveBtn.disabled=true;
+  try{
+   const completed=await previousSave();if(completed!==true)return false;
+   if(!await plan66FlushPersistence())throw Error('브라우저 안전 사본 저장이 끝나지 않았습니다.');
+   const id=data.id;if(!id||!store.documents?.[id])throw Error('저장할 계획서 번호를 확인할 수 없습니다.');
+   const current=structuredClone(data),doc=structuredClone(store.documents[id]);verifyDocument(doc,current);
+   const savedAt=new Date().toISOString(),docName=id+'.json';
+   const detail={project:'안전-작업계획서',id,savedAt,document:doc};
+   const list={project:'안전-작업계획서',version:3,kind:'plans',savedAt,store:plan17ReportSnapshot()};
+   const docJSON=JSON.stringify(detail,null,2),listJSON=JSON.stringify(list,null,2);
+   const oldDoc=await read(docName),oldList=await read(SAVED_LIST);
+   await guardedBackup(docName,oldDoc,docJSON);
+   await guardedBackup(SAVED_LIST,oldList,listJSON);
+   // First write the individual document, verify the exact image records, THEN update search list.
+   await write(docName,docJSON);
+   const verifiedDetail=JSON.parse(await read(docName));verifyDocument(verifiedDetail.document,doc);
+   await write(SAVED_LIST,listJSON);
+   const verifiedList=JSON.parse(await read(SAVED_LIST));verifyDocument(verifiedList.store?.documents?.[id],doc);
+   planFolderPaused=false;
+   const photoCount=(doc.plan28Photos||[]).length;
+   planFolderState('폴더 저장 완료 · '+id+' · 계획도 이미지 '+photoCount+'장 검증');
+   const label=document.getElementById('saveStatus');if(label)label.textContent='PC 폴더에 저장 완료 · 이미지 '+photoCount+'장 확인';
+   const chip=document.getElementById('statusChip');if(chip)chip.textContent='폴더 저장됨';
+   window.plan74LastSave={id,photos:photoCount,savedAt,folder:planFolderHandle.name};
+   toast(id+' 폴더 저장 완료 · 계획도 사진 '+photoCount+'장 확인');return true;
+  }catch(e){
+   console.error('계획서 폴더 검증 저장 실패',e);
+   const label=document.getElementById('saveStatus');if(label)label.textContent='폴더 저장 실패 · 현재 창을 유지하세요';
+   const chip=document.getElementById('statusChip');if(chip)chip.textContent='폴더 미저장';
+   alert('계획서가 PC 폴더에 정상 저장되었다고 확인할 수 없습니다.\n'+(e?.message||e)+'\n현재 창을 닫지 말고 저장 폴더를 확인해 주세요. 기존 자료는 삭제하지 않았습니다.');
+   return false;
+  }finally{writing=false;if(saveBtn)saveBtn.disabled=priorDisabled}
+ };
+ // On document change, don't silently discard a newly pasted plan drawing. Preserve original selection/UI.
+ const previousOpen=plan18OpenDocument;
+ plan18OpenDocument=async function(id){
+  if(id!==data.id&&plan18HasMeaningfulContent()&&plan68Changed()){
+   if(!await saveDocument())return false;
+  }
+  return previousOpen(id);
+ };
+ const previousNew=newDocument;
+ newDocument=async function(...args){
+  if(plan18HasMeaningfulContent()&&plan68Changed()&&(data.plan28Photos||[]).length){
+   if(!await saveDocument())return false;
+  }
+  return previousNew.apply(this,args);
+ };
+})();
+</script>
+<script id="plan75-device-folder-local-only">
+'use strict';
+/* Only the assigned folder stores workplace data.  Browser storage is limited to device
+   credential, folder handle and optional path-display text. No server writes except backup. */
+(()=>{
+ const DOCS='안전작업계획서_계획서목록.json';
+ const SETTINGS='안전작업계획서_기준설정.json';
+ const COMBINED='안전작업계획서_전체데이터.json';
+ const HANDLE_PREFIX=PLAN_FOLDER_HANDLE_KEY+':device:';
+ const deviceId=()=>{try{return JSON.parse(localStorage.getItem('safeplan_server_device_v1')||'null')?.deviceId||''}catch(_){return ''}};
+ const originalRemember=rememberPlanFolder,originalRecall=recallPlanFolder;
+ async function getNamedHandle(key){const db=await planFolderDB();try{return await new Promise((resolve,reject)=>{const r=db.transaction('handles','readonly').objectStore('handles').get(key);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error)})}finally{db.close()}}
+ async function putNamedHandle(key,handle){const db=await planFolderDB();try{await new Promise((resolve,reject)=>{const tx=db.transaction('handles','readwrite');tx.objectStore('handles').put(handle,key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)})}finally{db.close()}}
+ // A first-time registration has no device ID until the master approves it. The selected
+ // in-memory handle is bound to the issued device ID immediately after approval.
+ rememberPlanFolder=async function(handle){if(deviceId())return putNamedHandle(HANDLE_PREFIX+deviceId(),handle);return originalRemember(handle)};
+ recallPlanFolder=async function(){const id=deviceId();if(!id)return null;const own=await getNamedHandle(HANDLE_PREFIX+id);if(own)return own;
+  const legacy=await originalRecall();if(!legacy)return null;
+  // One-time migration of an existing registered machine; do not move any files.
+  await putNamedHandle(HANDLE_PREFIX+id,legacy);return legacy;
+ };
+ window.plan75BindFirstFolder=async function(){if(!deviceId()||!planFolderHandle)throw Error('등록된 기기와 선택된 폴더를 확인할 수 없습니다.');await rememberPlanFolder(planFolderHandle)};
+ const folderAllowed=async interactive=>{
+  if(!window.plan73CanRead?.())throw Error('등록기기의 사용 승인이 필요합니다.');
+  if(!planFolderHandle)throw Error('이 기기에 지정된 저장 폴더가 없습니다. [설정 → 폴더 지정]을 사용하세요.');
+  const bound=await recallPlanFolder();
+  if(!bound||!(await bound.isSameEntry(planFolderHandle)))throw Error('현재 폴더가 이 등록기기에 지정된 폴더와 일치하지 않습니다. 설정에서 정식으로 폴더를 변경해 주세요.');
+  if(!await planFolderPermission(interactive))throw Error('이 PC의 지정 저장 폴더 접근 권한이 없습니다. [폴더 접근 승인]을 눌러 주세요.');
+ };
+ const read=async(name,handle=planFolderHandle)=>{try{return await(await(await handle.getFileHandle(name)).getFile()).text()}catch(e){if(e.name==='NotFoundError')return null;throw e}};
+ const put=async(name,value)=>{const h=await planFolderHandle.getFileHandle(name,{create:true});const w=await h.createWritable();try{await w.write(value);await w.close()}catch(e){try{await w.abort()}catch(_){ }throw e}};
+ const imageSig=doc=>JSON.stringify(doc?.plan28Photos||[]);
+ const copy=x=>structuredClone(x);
+ const makeCombined=()=>({project:'안전-작업계획서',version:3,kind:'settings-and-plans',savedAt:new Date().toISOString(),store:plan17ReportSnapshot(),settings:plan17ReferenceSnapshot(true),masters:plan17RegisteredMastersSnapshot(true)});
+ const makePlans=()=>({project:'안전-작업계획서',version:3,kind:'plans',savedAt:new Date().toISOString(),store:plan17ReportSnapshot()});
+ const readJSON=async name=>{const text=await read(name);if(text===null)return null;let p;try{p=JSON.parse(text)}catch(e){throw Error('저장 폴더의 JSON 파일 형식 오류: '+name)}if(p?.project!=='안전-작업계획서')throw Error('저장 폴더의 자료 형식 오류: '+name);return p};
+ let timer=null,writing=Promise.resolve(),version=0,flushed=0,lastError=null;
+ let loading=false;
+ function status(msg){const el=document.getElementById('saveStatus');if(el)el.textContent=msg;planFolderState(msg)}
+ const hasWrites=()=>!!timer||flushed!==version;
+ window.plan75NewDeviceEmpty=false;
+ function snapshotInMemory(){store.draft=copy(data);store.currentId=data.id;}
+ async function commitToFolder({plans=false,documentId=null,force=false}={}){
+  if(loading)return true;
+  if(!window.plan73CanWrite?.())throw Error('현재 기기에는 저장 권한이 없습니다.');
+  await folderAllowed(false); // Never silently switch to another local folder.
+  snapshotInMemory();
+  const payload=makeCombined(),plansPayload=plans?makePlans():null;
+  const id=documentId||data.id;
+  const per=plans&&id&&store.documents?.[id]?{project:'안전-작업계획서',id,savedAt:payload.savedAt,document:copy(store.documents[id])}:null;
+  // All writes are serialized to prevent a previous large-image write from arriving last.
+  // Individual document + plans index are written first, then the combined archive is the commit marker.
+  if(per){await put(id+'.json',JSON.stringify(per,null,2));const after=await readJSON(id+'.json');if(after?.id!==id||imageSig(after.document)!==imageSig(per.document))throw Error('계획도 사진 재검증 실패: '+id)}
+  if(plansPayload){await put(DOCS,JSON.stringify(plansPayload,null,2));const list=await readJSON(DOCS);if(imageSig(list?.store?.documents?.[id])!==imageSig(store.documents?.[id]))throw Error('계획서 목록의 이미지 검증 실패')}
+  await put(COMBINED,JSON.stringify(payload,null,2));
+  const restored=await readJSON(COMBINED);
+  if(!restored?.store?.documents||imageSig(restored.store?.draft)!==imageSig(payload.store.draft)||
+     (id&&store.documents[id]&&imageSig(restored.store.documents[id])!==imageSig(store.documents[id])))throw Error('PC 폴더의 계획도 이미지 재읽기 검증에 실패했습니다.');
+  lastError=null;status('지정 폴더에 저장됨 · '+planFolderHandle.name);
+  return true;
+ }
+ async function queueWrite(opts={}){const mine=++version;const task=writing.then(()=>commitToFolder(opts));writing=task.then(()=>{flushed=mine;lastError=null;return true},e=>{lastError=e;status('폴더 저장 실패 · 현재 창을 닫지 마세요: '+e.message);return false});return writing}
+ function schedule(){if(loading||window.plan75NewDeviceEmpty||!window.plan73CanWrite?.())return;clearTimeout(timer);timer=setTimeout(()=>{timer=null;queueWrite().catch(e=>console.warn('로컬 저장 오류:',e))},1100)}
+ // Business snapshots are not written to IndexedDB / localStorage. The folder is the durable source.
+ persist=function(){try{snapshotInMemory();if(!plan66Booting)schedule();return true}catch(e){lastError=e;status('폴더 저장 대기 오류: '+e.message);return false}};
+ plan66FlushPersistence=async function(){if(timer){clearTimeout(timer);timer=null;await queueWrite()}else if(hasWrites())await writing;return !lastError};
+ // Folder handle storage is metadata, not a second copy of the documents.
+ async function loadFromFolder(){
+  let handle=planFolderHandle;
+  if(!handle){handle=await recallPlanFolder();planFolderHandle=handle}
+  if(!handle)throw Error('이 기기의 저장 폴더를 찾지 못했습니다. 최초 등록 폴더를 다시 연결해야 합니다.');
+  if(!await planFolderPermission(false))throw Error('지정 폴더 접근 권한이 만료되었습니다. [폴더 접근 승인]을 눌러 주세요.');
+  await folderAllowed(false);
+  loading=true;
+  try{
+   const combined=await readJSON(COMBINED),plans=await readJSON(DOCS),settings=await readJSON(SETTINGS);
+   window.plan75NewDeviceEmpty=!combined&&!plans&&!settings;
+   // Prefer newest full document snapshot. Never merge backups or reinstate deleted records.
+   const docsSource=(!combined?.store)?plans:(!plans?.store?combined:(String(plans.savedAt||'')>String(combined.savedAt||'')?plans:combined));
+   if(docsSource?.store){
+    const saved=copy(docsSource.store);for(const key of PLAN17_REFERENCE_FIELDS)delete saved[key];
+    Object.keys(store).filter(k=>!PLAN17_REFERENCE_FIELDS.includes(k)).forEach(k=>delete store[k]);Object.assign(store,saved);
+    if(!store.documents||typeof store.documents!=='object')store.documents={};
+   }
+   // Settings and registered personnel are loaded exclusively from selected local files.
+   const legacySettings=Object.fromEntries(PLAN17_REFERENCE_FIELDS.filter(k=>Object.hasOwn(combined?.store||{},k)).map(k=>[k,copy(combined.store[k])]));
+   const primarySettings=(settings&&String(settings.savedAt||'')>=String(combined?.savedAt||''))?settings.settings:combined?.settings||settings?.settings||legacySettings;
+   const registrations=combined?.masters||primarySettings?.registeredMasters;
+   if(primarySettings)for(const k of PLAN17_REFERENCE_FIELDS)if(Object.hasOwn(primarySettings,k))store[k]=copy(primarySettings[k]);
+   for(const kind of ['persons','equipment','cargo'])if(Array.isArray(registrations?.[kind]))masters[kind]=copy(registrations[kind]);
+   data=copy(store.draft||store.documents?.[store.currentId]||empty());
+   store.currentId=data.id;plan68Remember(data);
+   fillFields();plan18RenderAllDocuments();if(typeof window.plan50RefreshGallery==='function')window.plan50RefreshGallery();
+   planFolderPaused=false;planFolderState('이 기기의 지정 폴더 불러오기 완료: '+handle.name);
+  }finally{loading=false}
+ }
+ plan66InitializeStorage=async function(){
+  const overlay=document.getElementById('planSafeBusyOverlay');
+  if(overlay){document.getElementById('planSafeBusyMessage').textContent='기기 지정 폴더 자료 확인 중';overlay.hidden=false}
+  try{await loadFromFolder();plan66Booting=false;plan66ReadyResolve();plan66StorageStatus('saved');return true}
+  catch(e){plan66Booting=true;status('지정 폴더 연결 필요: '+e.message);throw e}
+  finally{if(overlay)overlay.hidden=true}
+ };
+ window.plan75FolderApprove=async function(){
+  if(!planFolderHandle)planFolderHandle=await recallPlanFolder();
+  if(!planFolderHandle)throw Error('지정된 폴더가 없습니다.');
+  if(!await planFolderPermission(true))throw Error('폴더 접근을 허용하지 않았습니다.');
+  return window.plan73RequireEdit();
+ };
+ // Changing folders is an explicit action, not an automatic fall-back to any arbitrary PC directory.
+ choosePlanFolder=async function(){
+  if(!('showDirectoryPicker' in window))throw Error('이 브라우저에서는 로컬 폴더 지정이 지원되지 않습니다. PC용 크롬·엣지를 사용하세요.');
+  const previous=planFolderHandle;
+  if(previous&&!confirm('등록기기의 저장 폴더를 변경하시겠습니까?\n현재 폴더의 파일은 그대로 보존됩니다.'))return false;
+  let next;try{next=await window.showDirectoryPicker({id:'safety-work-plan',mode:'readwrite'})}catch(e){if(e.name==='AbortError')return false;throw e}
+  if(previous&&await previous.isSameEntry(next)){planFolderState('기존 지정 폴더 유지: '+next.name);return true}
+  const grant=await next.queryPermission({mode:'readwrite'});
+  if(grant!=='granted'&&await next.requestPermission({mode:'readwrite'})!=='granted')throw Error('새 폴더 권한이 승인되지 않았습니다.');
+  const old=planFolderHandle;planFolderHandle=next;
+  try{
+   // Inspect before recording a change; no files are overwritten on folder selection.
+   const existing=await readJSON(COMBINED)||await readJSON(DOCS);
+   if(existing&&!confirm('새 폴더에 이미 계획서 자료가 있습니다.\n이 폴더의 자료를 열어 기존 폴더 연결을 바꾸시겠습니까?\n기존 폴더의 파일은 유지됩니다.')){planFolderHandle=old;return false}
+   await rememberPlanFolder(next);planFolderPaused=false;
+   if(existing){await loadFromFolder()}else {window.plan75NewDeviceEmpty=false;planFolderState('변경된 빈 폴더 지정: '+next.name+' · 저장 버튼을 눌러 현재 자료 저장');}
+   return true;
+  }catch(e){planFolderHandle=old;if(old)await rememberPlanFolder(old);throw e}
+ };
+ // Bind the selected registration-time folder to the newly issued device ID, then save samples only there.
+ const previousFinalize=window.plan72FinalizeRegistration;
+ if(typeof previousFinalize==='function')window.plan72FinalizeRegistration=async function(){await window.plan75BindFirstFolder();const r=await previousFinalize();window.plan75NewDeviceEmpty=false;return r};
+ // Existing first-login sample is created in the chosen folder. No browser-copy verification required.
+ // Non-save actions should not report durable success before this folder file is written.
+ const oldCommit=plan18CommitDocumentOnNavigation;
+ plan18CommitDocumentOnNavigation=async function(){
+  if(!plan18HasMeaningfulContent())return true;
+  if(data.id&&store.documents[data.id]&&!plan68Changed())return true;
+  return !!(await saveDocument());
+ };
+ // Direct entry point, wrapper plan74 validates individual photo payload; it must flush the combined file as well.
+ const lastSave=saveDocument;
+ saveDocument=async function(){
+  const ok=await lastSave();if(ok!==true)return false;
+  try{await queueWrite({plans:true,documentId:data.id});if(lastError)throw lastError;
+   const label=document.getElementById('saveStatus');if(label)label.textContent='PC 지정 폴더 저장 완료 · '+data.id;
+   return true;
+  }catch(e){status('저장 실패 · 화면을 닫지 마세요: '+e.message);alert('지정 폴더 저장 실패: '+e.message);return false}
+ };
+ // Keep click highlight but do not change the document list order. Date-sort is based only on initial creation.
+ plan18OpenDocument=async function(id){
+  const selected=store.documents?.[id];if(!selected)return alert('저장된 계획서를 찾지 못했습니다.');
+  if(id===data.id){toast('이미 열려 있는 계획서입니다.');return true}
+  if(!confirm('['+id+'] 계획서를 열까요? 현재 작성 중인 변경 내용은 먼저 지정 폴더에 저장합니다.'))return false;
+  if(plan18HasMeaningfulContent()&&plan68Changed()&&!await saveDocument())return false;
+  data=plan65RuntimeDoc(copy(store.documents[id]));store.currentId=id;
+  if(!persist())return false;
+  fillFields();plan68Remember();plan18RenderAllDocuments();
+  toast(id+' 계획서를 불러왔습니다.');return true;
+ };
+ // Other button actions that edit a saved document must also persist the resulting record in this folder.
+ for(const name of ['plan69CopyDocument','plan69EditTitle']){
+  const old=window[name];if(typeof old!=='function')continue;
+  window[name]=async function(...args){const before=JSON.stringify(plan17ReportSnapshot());const result=await old(...args);
+   if(JSON.stringify(plan17ReportSnapshot())!==before){try{const target=name==='plan69EditTitle'?args[0]:Object.keys(store.documents).find(k=>!JSON.parse(before).documents?.[k]);await queueWrite({plans:true,documentId:target||data.id});if(lastError)throw lastError}catch(e){status('변경 내용 폴더 저장 실패: '+e.message);alert('폴더 저장 오류: '+e.message)}}return result;
+  }
+ }
+ const promptOnExit=e=>{if(timer||flushed!==version||lastError){e.preventDefault();e.returnValue=''} };
+ window.addEventListener('beforeunload',promptOnExit);
+ // Provide a recovery-only action for expired folder grants, without accepting an unregistered folder.
+ const gate=document.getElementById('plan73AccessGate');
+ if(gate){const b=document.createElement('button');b.id='plan75Approve';b.type='button';b.textContent='지정 폴더 접근 승인';b.style.marginLeft='8px';gate.querySelector('.plan73-box')?.append(b);
+  b.onclick=async()=>{try{await window.plan75FolderApprove()}catch(e){alert(e.message)}}}
+})();
+</script>
+<script id="plan73-live-device-permission">
+'use strict';
+/* Safety plan UI access gate. Public GitHub Pages still serves HTML source publicly.
+ * This blocks the official application workflow; server protects its API independently.
+ */
+(()=>{
+ const ROOT=document.documentElement, CREDENTIAL='safeplan_server_device_v1';
+ const gate=document.createElement('section');gate.id='plan73AccessGate';gate.setAttribute('role','alertdialog');gate.setAttribute('aria-modal','true');
+ gate.innerHTML='<div class="plan73-box"><h2>🔒 안전 작업계획서 · 기기 권한 확인</h2><p id="plan73AccessMessage">등록기기 사용 권한을 확인하고 있습니다.</p><button id="plan73Retry" type="button">권한 다시 확인</button></div>';
+ document.body.append(gate);
+ const message=document.getElementById('plan73AccessMessage');
+ const $=id=>document.getElementById(id);
+ let state='checking',role='',booted=false,booting=null,pending=null;
+ const credentials=()=>{try{const c=JSON.parse(localStorage.getItem(CREDENTIAL)||'null');return c?.deviceId&&c?.deviceToken?c:null}catch(_){return null}};
+ const permitted=()=>state==='active'||state==='readonly';
+ const writeAllowed=()=>state==='active';
+ window.plan73CanRead=permitted;
+ window.plan73CanWrite=writeAllowed;
+ function paint(next,detail){
+  state=next;
+  const allowed=permitted();
+  ROOT.classList.toggle('safeplan-access-locked',!allowed);
+  ROOT.classList.toggle('safeplan-access-viewer',state==='readonly');
+  gate.hidden=allowed||state==='unregistered';
+  const re=($('plan73Retry'));
+  re.hidden=state==='unregistered';
+  message.textContent=detail||({checking:'서버에서 등록기기 권한을 확인하고 있습니다.',unregistered:'등록코드를 발급받아 먼저 기기를 등록하세요.',suspended:'마스터가 이 기기의 사용을 중지했습니다. 계획서 화면 및 폴더 불러오기와 저장을 사용할 수 없습니다.',disconnected:'서버에서 기기 사용권한을 확인하지 못했습니다. 보안을 위해 안전 작업계획서를 잠갔습니다. 인터넷 연결을 확인한 뒤 다시 시도하세요.'}[next]||'');
+  if(!allowed){
+   const onboard=$('plan72Gate');if(onboard&&next!=='unregistered')onboard.hidden=true;
+  }
+ }
+ async function startStorage(){
+  if(booted)return;
+  if(!booting){booting=Promise.resolve().then(()=>{
+   if(!window.plan73StartStorage)throw Error('기존 자료 초기화 함수를 찾지 못했습니다.');
+   return window.plan73StartStorage();
+  }).then(()=>{booted=true}).finally(()=>{booting=null});}
+  return booting;
+ }
+ async function requestFresh(options={}){
+  const c=credentials();
+  if(!c){role='';paint('unregistered');if($('plan72Gate'))$('plan72Gate').hidden=false;return false;}
+  if(pending){const ok=await pending;return !!ok&&(!options.write||role!=='viewer');}
+  pending=(async()=>{
+   try{
+    const r=await Promise.race([
+     window.plan73RemotePing(),
+     new Promise((_,reject)=>setTimeout(()=>reject(Error('권한 확인 제한시간 초과')),22000))
+    ]);
+    if(!r?.ok||!['master','editor','viewer'].includes(r.role))throw Error('유효한 기기 권한을 확인하지 못했습니다.');
+    role=r.role;
+    if(options.write&&role==='viewer'){paint('readonly','이 기기는 조회 전용으로 승인되었습니다. 수정·신규·저장 기능은 허용되지 않습니다.');return false;}
+    // Permit internal recovery writes, but keep the screen locked until it finishes.
+    state=role==='viewer'?'readonly':'active';
+    await startStorage();
+    paint(state);
+    if(state==='readonly'){const editNotice=$('plan70Status');if(editNotice)editNotice.textContent='조회 전용 기기 · 변경 및 저장 불가';}
+    return true;
+   }catch(e){
+    role='';
+    const reason=String(e?.message||e||'권한 확인 실패');
+    if(/사용.?중지|중지된|폐기|revok/i.test(reason))paint('suspended');
+    else paint('disconnected','서버 권한 확인 실패: '+reason+'\n인터넷을 연결한 뒤 [권한 다시 확인]을 눌러 주세요.');
+    return false;
+   }
+  })();
+  try{return await pending}finally{pending=null}
+ }
+ window.plan73AuthorizeNewDevice=async()=>{if(!await requestFresh())throw Error('기기 등록 이후 서버의 사용 승인을 확인하지 못했습니다.');};
+ window.plan73RequireEdit=async()=>{if(!await requestFresh({write:true})){if(state==='readonly')alert('이 기기는 조회 전용입니다.');return false;}return true;};
+ $('plan73Retry').onclick=()=>requestFresh();
+ // Revoke an already-open page at the next check, on focus, or before a material operation.
+ setInterval(()=>{if(credentials()&&!document.hidden)requestFresh()},12000);
+ window.addEventListener('focus',()=>{if(credentials())requestFresh()});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&credentials())requestFresh()});
+ document.addEventListener('pageshow',()=>{if(credentials())requestFresh()});
+ // On a suspended/disconnected device, never permit a delayed callback to write a new browser snapshot.
+ const originalPersist=persist;
+ persist=function(...args){if(!writeAllowed())return false;return originalPersist.apply(this,args)};
+ const mutate=['newDocument','saveDocument','saveCurrentIntoPlanFolder','importPlanFolderData','plan17SaveReferenceSettings','plan17LoadReferenceSettings','plan69CopyDocument','plan69EditTitle'];
+ for(const name of mutate){
+  const old=window[name];if(typeof old!=='function')continue;
+  window[name]=async function(...args){
+   if(!await window.plan73RequireEdit())return false;
+   return old.apply(this,args);
+  };
+ }
+ // Block in-app editor activity for a viewer, and any interaction while approval has been lost.
+ document.addEventListener('click',e=>{
+  if(!permitted()){
+   if(e.target.closest('#plan73AccessGate,#plan72Gate'))return;
+   e.preventDefault();e.stopImmediatePropagation();return;
+  }
+  if(state!=='readonly')return;
+  const node=e.target.closest('button,a,[role="button"]');if(!node)return;
+  if(node.closest('#plan70ServerPanel')){
+   if(node.id==='plan70Check'||node.id==='plan70List'||node.id==='plan70Verify')return;
+   e.preventDefault();e.stopImmediatePropagation();return;
+  }
+  const label=(node.textContent||'')+' '+(node.getAttribute('onclick')||'');
+  if(/(저장|수정|삭제|추가|복사|등록|신규|불러오기|초기화|해제|변경|체크|열기|save|delete|add|copy|edit|register|import)/i.test(label)){
+   e.preventDefault();e.stopImmediatePropagation();
+  }
+ },true);
+ for(const name of ['beforeinput','paste','drop'])document.addEventListener(name,e=>{
+  if(!permitted()||state==='readonly'){
+   if(e.target.closest('#plan72Gate,#plan73AccessGate'))return;
+   e.preventDefault();e.stopImmediatePropagation();
+  }
+ },true);
+ // File pickers must not open for an unapproved device (folder and JSON files are left untouched).
+ const originalChoose=window.choosePlanFolder;
+ if(typeof originalChoose==='function')window.choosePlanFolder=async function(...args){
+  if(!credentials()&&!booted)return originalChoose.apply(this,args); // initial registration requires folder selection
+  if(!await window.plan73RequireEdit())return;
+  return originalChoose.apply(this,args);
+ };
+ // Startup: unregistered uses the existing registration UI; existing tokens must be revalidated online.
+ if(credentials())requestFresh();else{paint('unregistered');if($('plan72Gate'))$('plan72Gate').hidden=false;}
 })();
 </script>
 </body></html>
