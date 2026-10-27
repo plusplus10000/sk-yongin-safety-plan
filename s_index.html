@@ -6591,10 +6591,9 @@ if(settingsTree){
 (()=>{
  const $60=id=>document.getElementById(id);
  let busy=false;
- const DB_NAME='safeWorkPlan_durable_v1',DB_OBJECT='snapshots';
- function db(){return new Promise((resolve,reject)=>{if(!window.indexedDB)return reject(Error('브라우저 추가 저장소 미지원'));const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(DB_OBJECT))req.result.createObjectStore(DB_OBJECT)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||Error('브라우저 추가 저장소 연결 실패'))})}
- async function dbSave(key,payload){return true;/* plan75: no business record stored in browser */}
- async function backupCurrent(key='active') {return dbSave(key,{savedAt:new Date().toISOString(),report:structuredClone(plan17ReportSnapshot()),masters:structuredClone(masters),reference:plan17ReferenceSnapshot(true)})}
+ // Legacy callbacks remain callable, but never open IndexedDB or write business
+ // records in the browser. The registered device folder is the primary store.
+ async function backupCurrent(){return true}
  // persist() now queues one complete snapshot and exposes an awaited completion check.
  // No implicit file writes. Preserve browser draft autosave and explicit folder saves.
  schedulePlanFolderSync=function(){clearTimeout(planFolderTimer);if(planFolderHandle&&!planFolderPaused)planFolderState('변경사항 보관됨 · 폴더 저장은 상단 [현재 자료 폴더에 저장]에서 실행');};
@@ -6718,8 +6717,9 @@ if(settingsTree){
    if(plan68Changed())data.updatedAt=new Date().toISOString();const existed=Object.hasOwn(store.documents,data.id)?structuredClone(store.documents[data.id]):null;
    store.documents[data.id]=structuredClone(data);plan68Remember();store.currentId=data.id;
    try {await backupCurrent('active')}catch(e){data=previous;store.currentId=priorDocId;if(existed)store.documents[previous.id]=existed;else delete store.documents[data.id];alert('안전 저장이 실패하여 계획서 저장을 취소했습니다: '+e.message);return false}
-   if(!persist()||!await plan66FlushPersistence())return false;const el=$60('saveStatus');if(el)el.textContent='지정 폴더에 저장 진행 중';
-   $60('statusChip').textContent='저장됨';updateSummary();plan18RenderAllDocuments();toast('계획서 저장 완료');return true;
+   if(!persist())return false;
+   const el=$60('saveStatus');if(el)el.textContent='지정 폴더 저장·사진 검증 중';
+   updateSummary();plan18RenderAllDocuments();return true;
   })};
  // Click only the model/type source. All derived equipment values are inert.
  const lockedCells=new Set(['1:D20','1:F20','1:J21','1:J22','1:K27','1:D22']);
@@ -7369,7 +7369,7 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   realName.value=name;realCode.value=code;btn.click();$72('plan72Msg').textContent='서버 기기등록 요청 중…';
  };
  async function exists(name){try{await planFolderHandle.getFileHandle(name);return true}catch(e){if(e.name==='NotFoundError')return false;throw e}}
- const NAMES=['안전작업계획서_전체데이터.json','안전작업계획서_기준설정.json','안전작업계획서_계획서목록.json','20261023-1.json'];
+ const NAMES=['안전작업계획서_기준설정.json','20261023-1.json'];
  async function folderContainsUserData(){
   for await(const [name] of planFolderHandle.entries())if(/\.json$/i.test(name))return true;
   return false;
@@ -7400,11 +7400,9 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
    const hidden=typeof plan45GalleryItems==='function'?plan45GalleryItems().filter(x=>x.isSeed).map(x=>x.id):[];
    store.plan45Gallery={hidden,items:[],notes:{}};
    const base={project:'안전-작업계획서',version:3,savedAt:now};
-   const combined={...base,kind:'settings-and-plans',store:plan17ReportSnapshot(),settings:plan17ReferenceSnapshot(true),masters:plan17RegisteredMastersSnapshot(true)};
-   const settings={...base,kind:'reference-settings',settings:plan17ReferenceSnapshot(true)};
-   const plans={...base,kind:'plans',store:plan17ReportSnapshot()};
-   const detail={project:'안전-작업계획서',id:doc.id,savedAt:now,document:structuredClone(doc)};
-   for(const [name,payload] of [[NAMES[0],combined],[NAMES[1],settings],[NAMES[2],plans],[NAMES[3],detail]])await writeNew(name,payload);
+   const settings={...base,version:5,kind:'reference-settings',settings:plan17ReferenceSnapshot(true),gallery:structuredClone(store.plan45Gallery||null),ui:{currentId:doc.id,deleted:{}}};
+   const detail={project:'안전-작업계획서',version:5,kind:'plan',id:doc.id,savedAt:now,document:structuredClone(doc)};
+   for(const [name,payload] of [[NAMES[0],settings],[NAMES[1],detail]])await writeNew(name,payload);
    planFolderPaused=false;plan17SettingsFolderReady=true;
    fillFields();plan18RenderAllDocuments();if(typeof window.plan50RefreshGallery==='function')window.plan50RefreshGallery();
    if(!persist()||!await plan66FlushPersistence())throw Error('PC 저장 폴더의 샘플 자료 저장 검증 실패');
@@ -7475,77 +7473,9 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
 
 <script id="plan74-verified-plan-save">
 'use strict';
-/* Preserve existing records and photos: explicit "계획서 저장" means file save AND read-back.
- * This does not delete old browser snapshots. Migration away from browser storage remains separate.
- */
+/* Only protect images on a new-document action.  The single plan75 save path
+   handles local-folder serialization and image read-back; never write twice. */
 (()=>{
- const SAVED_LIST='안전작업계획서_계획서목록.json';
- let writing=false;
- const read=async name=>{try{return await(await(await planFolderHandle.getFileHandle(name)).getFile()).text()}
-  catch(e){if(e.name==='NotFoundError')return null;throw e}};
- async function write(name,content){const h=await planFolderHandle.getFileHandle(name,{create:true});const w=await h.createWritable();
-  try{await w.write(content);await w.close()}catch(e){try{await w.abort()}catch(_e){}throw e}}
- function samePictures(a,b){return JSON.stringify(a||[])===JSON.stringify(b||[])}
- function verifyDocument(doc,expected){if(!doc||doc.id!==expected.id||!samePictures(doc.plan28Photos,expected.plan28Photos))throw Error('계획도 이미지가 저장 문서와 일치하지 않습니다. 원본 창을 닫지 마세요.')}
- async function guardedBackup(name,oldText,newText){
-  if(oldText===null||oldText===newText)return;
-  const stem=name.replace(/\.json$/i,'');const date=new Date().toISOString().replace(/[-:TZ.]/g,'').slice(0,14);
-  let fname,idx=0;do{fname=stem+'_복구백업_'+date+(idx?'_'+idx:'')+'.json';idx++}while(await read(fname)!==null);
-  await write(fname,oldText);
-  if(await read(fname)!==oldText)throw Error('기존 자료 복구백업 검증 실패: '+fname);
- }
- async function verifyFolderAllowed(){
-  if(!planFolderHandle){alert('계획서가 PC 폴더에 저장되지 않았습니다. 먼저 설정에서 [폴더 지정]을 눌러 주세요. 현재 작성 화면은 그대로 유지됩니다.');return false}
-  if(!await planFolderPermission(true)){alert('계획서 폴더에 접근할 수 없습니다. [설정 → 접근 재승인] 후 저장해 주세요. 현재 작성 화면은 그대로 유지됩니다.');return false}
-  return true;
- }
- const previousSave=saveDocument;
- saveDocument=async function(){
-  if(writing){toast('이전 계획서 저장이 진행 중입니다.');return false}
-  if(!await verifyFolderAllowed())return false;
-  writing=true;
-  const saveBtn=[...document.querySelectorAll('button')].find(b=>(b.getAttribute('onclick')||'').trim()==='saveDocument()');
-  const priorDisabled=saveBtn?.disabled;if(saveBtn)saveBtn.disabled=true;
-  try{
-   const completed=await previousSave();if(completed!==true)return false;
-   if(!await plan66FlushPersistence())throw Error('브라우저 안전 사본 저장이 끝나지 않았습니다.');
-   const id=data.id;if(!id||!store.documents?.[id])throw Error('저장할 계획서 번호를 확인할 수 없습니다.');
-   const current=structuredClone(data),doc=structuredClone(store.documents[id]);verifyDocument(doc,current);
-   const savedAt=new Date().toISOString(),docName=id+'.json';
-   const detail={project:'안전-작업계획서',id,savedAt,document:doc};
-   const list={project:'안전-작업계획서',version:3,kind:'plans',savedAt,store:plan17ReportSnapshot()};
-   const docJSON=JSON.stringify(detail,null,2),listJSON=JSON.stringify(list,null,2);
-   const oldDoc=await read(docName),oldList=await read(SAVED_LIST);
-   await guardedBackup(docName,oldDoc,docJSON);
-   await guardedBackup(SAVED_LIST,oldList,listJSON);
-   // First write the individual document, verify the exact image records, THEN update search list.
-   await write(docName,docJSON);
-   const verifiedDetail=JSON.parse(await read(docName));verifyDocument(verifiedDetail.document,doc);
-   await write(SAVED_LIST,listJSON);
-   const verifiedList=JSON.parse(await read(SAVED_LIST));verifyDocument(verifiedList.store?.documents?.[id],doc);
-   planFolderPaused=false;
-   const photoCount=(doc.plan28Photos||[]).length;
-   planFolderState('폴더 저장 완료 · '+id+' · 계획도 이미지 '+photoCount+'장 검증');
-   const label=document.getElementById('saveStatus');if(label)label.textContent='PC 폴더에 저장 완료 · 이미지 '+photoCount+'장 확인';
-   const chip=document.getElementById('statusChip');if(chip)chip.textContent='폴더 저장됨';
-   window.plan74LastSave={id,photos:photoCount,savedAt,folder:planFolderHandle.name};
-   toast(id+' 폴더 저장 완료 · 계획도 사진 '+photoCount+'장 확인');return true;
-  }catch(e){
-   console.error('계획서 폴더 검증 저장 실패',e);
-   const label=document.getElementById('saveStatus');if(label)label.textContent='폴더 저장 실패 · 현재 창을 유지하세요';
-   const chip=document.getElementById('statusChip');if(chip)chip.textContent='폴더 미저장';
-   alert('계획서가 PC 폴더에 정상 저장되었다고 확인할 수 없습니다.\n'+(e?.message||e)+'\n현재 창을 닫지 말고 저장 폴더를 확인해 주세요. 기존 자료는 삭제하지 않았습니다.');
-   return false;
-  }finally{writing=false;if(saveBtn)saveBtn.disabled=priorDisabled}
- };
- // On document change, don't silently discard a newly pasted plan drawing. Preserve original selection/UI.
- const previousOpen=plan18OpenDocument;
- plan18OpenDocument=async function(id){
-  if(id!==data.id&&plan18HasMeaningfulContent()&&plan68Changed()){
-   if(!await saveDocument())return false;
-  }
-  return previousOpen(id);
- };
  const previousNew=newDocument;
  newDocument=async function(...args){
   if(plan18HasMeaningfulContent()&&plan68Changed()&&(data.plan28Photos||[]).length){
@@ -7560,9 +7490,9 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
 /* Only the assigned folder stores workplace data.  Browser storage is limited to device
    credential, folder handle and optional path-display text. No server writes except backup. */
 (()=>{
- const DOCS='안전작업계획서_계획서목록.json';
+ const LEGACY_DOCS='안전작업계획서_계획서목록.json'; // Read only; never create a new search-list file.
  const SETTINGS='안전작업계획서_기준설정.json';
- const COMBINED='안전작업계획서_전체데이터.json';
+ const COMBINED='안전작업계획서_전체데이터.json'; // Legacy import only; no new combined archives.
  const HANDLE_PREFIX=PLAN_FOLDER_HANDLE_KEY+':device:';
  const deviceId=()=>{try{return JSON.parse(localStorage.getItem('safeplan_server_device_v1')||'null')?.deviceId||''}catch(_){return ''}};
  const originalRemember=rememberPlanFolder,originalRecall=recallPlanFolder;
@@ -7588,8 +7518,11 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
  const put=async(name,value)=>{const h=await planFolderHandle.getFileHandle(name,{create:true});const w=await h.createWritable();try{await w.write(value);await w.close()}catch(e){try{await w.abort()}catch(_){ }throw e}};
  const imageSig=doc=>JSON.stringify(doc?.plan28Photos||[]);
  const copy=x=>structuredClone(x);
- const makeCombined=()=>({project:'안전-작업계획서',version:3,kind:'settings-and-plans',savedAt:new Date().toISOString(),store:plan17ReportSnapshot(),settings:plan17ReferenceSnapshot(true),masters:plan17RegisteredMastersSnapshot(true)});
- const makePlans=()=>({project:'안전-작업계획서',version:3,kind:'plans',savedAt:new Date().toISOString(),store:plan17ReportSnapshot()});
+ const now=()=>new Date().toISOString();
+ const makeSettings=()=>({project:'안전-작업계획서',version:5,kind:'reference-settings',savedAt:now(),settings:plan17ReferenceSnapshot(true),gallery:copy(store.plan45Gallery||null),
+  // Minimal UI state, not a second plan list. Document titles and thumbnails are read from each plan JSON.
+  ui:{currentId:store.currentId||'',deleted:Object.fromEntries(Object.entries(store.planDeletedDocuments||{}).map(([id,val])=>[id,typeof val==='string'?val:val?.deletedAt||now()]))}});
+ // The folder itself is the search source. No separate list or photo duplicate is saved.
  const readJSON=async name=>{const text=await read(name);if(text===null)return null;let p;try{p=JSON.parse(text)}catch(e){throw Error('저장 폴더의 JSON 파일 형식 오류: '+name)}if(p?.project!=='안전-작업계획서')throw Error('저장 폴더의 자료 형식 오류: '+name);return p};
  let timer=null,writing=Promise.resolve(),version=0,flushed=0,lastError=null;
  let loading=false;
@@ -7600,23 +7533,30 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
  async function commitToFolder({plans=false,documentId=null,force=false}={}){
   if(loading)return true;
   if(!window.plan73CanWrite?.())throw Error('현재 기기에는 저장 권한이 없습니다.');
-  await folderAllowed(false); // Never silently switch to another local folder.
+  await folderAllowed(false);
   snapshotInMemory();
-  const payload=makeCombined(),plansPayload=plans?makePlans():null;
   const id=documentId||data.id;
-  const per=plans&&id&&store.documents?.[id]?{project:'안전-작업계획서',id,savedAt:payload.savedAt,document:copy(store.documents[id])}:null;
-  // All writes are serialized to prevent a previous large-image write from arriving last.
-  // Individual document + plans index are written first, then the combined archive is the commit marker.
-  if(per){await put(id+'.json',JSON.stringify(per,null,2));const after=await readJSON(id+'.json');if(after?.id!==id||imageSig(after.document)!==imageSig(per.document))throw Error('계획도 사진 재검증 실패: '+id)}
-  if(plansPayload){await put(DOCS,JSON.stringify(plansPayload,null,2));const list=await readJSON(DOCS);if(imageSig(list?.store?.documents?.[id])!==imageSig(store.documents?.[id]))throw Error('계획서 목록의 이미지 검증 실패')}
-  await put(COMBINED,JSON.stringify(payload,null,2));
-  const restored=await readJSON(COMBINED);
-  if(!restored?.store?.documents||imageSig(restored.store?.draft)!==imageSig(payload.store.draft)||
-     (id&&store.documents[id]&&imageSig(restored.store.documents[id])!==imageSig(store.documents[id])))throw Error('PC 폴더의 계획도 이미지 재읽기 검증에 실패했습니다.');
-  lastError=null;status('지정 폴더에 저장됨 · '+planFolderHandle.name);
-  return true;
+  // Only one selected plan file is written per explicit document save.
+  if(plans){
+   const current=store.documents?.[id];if(!id||!current)throw Error('저장할 계획서를 찾지 못했습니다.');
+   const per={project:'안전-작업계획서',version:4,kind:'plan',id,savedAt:now(),document:copy(current)};
+   await put(id+'.json',JSON.stringify(per));
+   const check=await readJSON(id+'.json');
+   if(check?.id!==id||imageSig(check.document)!==imageSig(per.document))throw Error('계획서 사진 저장 확인 실패: '+id);
+  }
+  // One shared settings file holds people/equipment/config and minimal deletion markers only.
+  const setting=makeSettings();await put(SETTINGS,JSON.stringify(setting));
+  const checked=await readJSON(SETTINGS);
+  if(checked?.kind!=='reference-settings'||checked.savedAt!==setting.savedAt)throw Error('공통 설정 저장 확인 실패');
+  lastError=null;status('지정 폴더 저장 완료 · '+planFolderHandle.name);return true;
  }
- async function queueWrite(opts={}){const mine=++version;const task=writing.then(()=>commitToFolder(opts));writing=task.then(()=>{flushed=mine;lastError=null;return true},e=>{lastError=e;status('폴더 저장 실패 · 현재 창을 닫지 마세요: '+e.message);return false});return writing}
+ async function queueWrite(opts={}){
+  // One complete explicit commit supersedes any scheduled draft-only write.
+  if(timer){clearTimeout(timer);timer=null}
+  const mine=++version, task=writing.then(()=>commitToFolder(opts));
+  writing=task.then(()=>{flushed=mine;lastError=null;return true},e=>{lastError=e;status('폴더 저장 실패 · 현재 창을 닫지 마세요: '+e.message);return false});
+  return writing;
+ }
  function schedule(){if(loading||window.plan75NewDeviceEmpty||!window.plan73CanWrite?.())return;clearTimeout(timer);timer=setTimeout(()=>{timer=null;queueWrite().catch(e=>console.warn('로컬 저장 오류:',e))},1100)}
  // Business snapshots are not written to IndexedDB / localStorage. The folder is the durable source.
  persist=function(){try{snapshotInMemory();if(!plan66Booting)schedule();return true}catch(e){lastError=e;status('폴더 저장 대기 오류: '+e.message);return false}};
@@ -7627,34 +7567,50 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   if(!handle){handle=await recallPlanFolder();planFolderHandle=handle}
   if(!handle)throw Error('이 기기의 저장 폴더를 찾지 못했습니다. 최초 등록 폴더를 다시 연결해야 합니다.');
   if(!await planFolderPermission(false))throw Error('지정 폴더 접근 권한이 만료되었습니다. [폴더 접근 승인]을 눌러 주세요.');
-  await folderAllowed(false);
-  loading=true;
+  await folderAllowed(false);loading=true;
   try{
-   const combined=await readJSON(COMBINED),plans=await readJSON(DOCS),settings=await readJSON(SETTINGS);
-   window.plan75NewDeviceEmpty=!combined&&!plans&&!settings;
-   // Prefer newest full document snapshot. Never merge backups or reinstate deleted records.
-   const docsSource=(!combined?.store)?plans:(!plans?.store?combined:(String(plans.savedAt||'')>String(combined.savedAt||'')?plans:combined));
-   if(docsSource?.store){
-    const saved=copy(docsSource.store);for(const key of PLAN17_REFERENCE_FIELDS)delete saved[key];
-    Object.keys(store).filter(k=>!PLAN17_REFERENCE_FIELDS.includes(k)).forEach(k=>delete store[k]);Object.assign(store,saved);
-    if(!store.documents||typeof store.documents!=='object')store.documents={};
+   const [legacyList,settings,combined]=await Promise.all([readJSON(LEGACY_DOCS),readJSON(SETTINGS),readJSON(COMBINED)]);
+   const oldPlan=legacyList?.store?legacyList:(combined?.store?combined:null);
+   // Old archives are read-only migration inputs; they are never copied wholesale again.
+   const legacyDocs=copy(oldPlan?.store?.documents||{});
+   const docs={...legacyDocs};let directCount=0;
+   for await(const [name,h] of handle.entries()){
+    if(h.kind!=='file'||!/^[0-9]{8}-[0-9]+\.json$/.test(name))continue;
+    const entry=await readJSON(name);
+    if(entry?.document&&entry.id){docs[entry.id]=copy(entry.document);directCount++}
    }
-   // Settings and registered personnel are loaded exclusively from selected local files.
-   const legacySettings=Object.fromEntries(PLAN17_REFERENCE_FIELDS.filter(k=>Object.hasOwn(combined?.store||{},k)).map(k=>[k,copy(combined.store[k])]));
-   const primarySettings=(settings&&String(settings.savedAt||'')>=String(combined?.savedAt||''))?settings.settings:combined?.settings||settings?.settings||legacySettings;
-   const registrations=combined?.masters||primarySettings?.registeredMasters;
-   if(primarySettings)for(const k of PLAN17_REFERENCE_FIELDS)if(Object.hasOwn(primarySettings,k))store[k]=copy(primarySettings[k]);
-   for(const kind of ['persons','equipment','cargo'])if(Array.isArray(registrations?.[kind]))masters[kind]=copy(registrations[kind]);
-   data=copy(store.draft||store.documents?.[store.currentId]||empty());
-   store.currentId=data.id;plan68Remember(data);
+   window.plan75NewDeviceEmpty=!legacyList&&!combined&&!settings&&!directCount;
+   const state=legacyList?.kind==='plan-index'?legacyList.state:(oldPlan?.store||{});
+   if(state&&typeof state==='object'){
+    const cleaned=copy(state);for(const k of PLAN17_REFERENCE_FIELDS)delete cleaned[k];
+    delete cleaned.documents;delete cleaned.draft;delete cleaned.plan45Gallery;
+    Object.keys(store).filter(k=>!PLAN17_REFERENCE_FIELDS.includes(k)).forEach(k=>delete store[k]);
+    Object.assign(store,cleaned);
+   }
+   // Current settings are authoritative; old list files are read only for backwards compatibility.
+   const deleted=settings?.ui?.deleted;
+   if(deleted&&typeof deleted==='object')store.planDeletedDocuments=copy(deleted);
+   if(Object.hasOwn(settings?.ui||{},'currentId'))store.currentId=settings.ui.currentId;
+   // Deleted documents retain their original JSON for manual restoration.
+   for(const id of Object.keys(store.planDeletedDocuments||{}))delete docs[id];
+   store.documents=docs;
+   const primarySettings=settings?.settings||combined?.settings||{};
+   const registrations=primarySettings.registeredMasters||combined?.masters||{};
+   for(const k of PLAN17_REFERENCE_FIELDS)if(Object.hasOwn(primarySettings,k))store[k]=copy(primarySettings[k]);
+   for(const kind of ['persons','equipment','cargo'])if(Array.isArray(registrations[kind]))masters[kind]=copy(registrations[kind]);
+   if(Object.hasOwn(settings||{},'gallery'))store.plan45Gallery=copy(settings.gallery);
+   else if(combined?.store?.plan45Gallery)store.plan45Gallery=copy(combined.store.plan45Gallery);
+   const active=store.currentId&&docs[store.currentId];
+   data=copy(active||((legacyList?.kind==='plan-index')?empty():oldPlan?.store?.draft)||empty());
+   store.currentId=data.id;store.draft=copy(data);plan68Remember(data);
    fillFields();plan18RenderAllDocuments();if(typeof window.plan50RefreshGallery==='function')window.plan50RefreshGallery();
-   planFolderPaused=false;planFolderState('이 기기의 지정 폴더 불러오기 완료: '+handle.name);
+   planFolderPaused=false;planFolderState('기기별 폴더에서 '+Object.keys(docs).length+'건 확인: '+handle.name);
   }finally{loading=false}
  }
  plan66InitializeStorage=async function(){
   const overlay=document.getElementById('planSafeBusyOverlay');
   if(overlay){document.getElementById('planSafeBusyMessage').textContent='기기 지정 폴더 자료 확인 중';overlay.hidden=false}
-  try{await loadFromFolder();plan66Booting=false;plan66ReadyResolve();plan66StorageStatus('saved');return true}
+  try{await loadFromFolder();plan66Booting=false;plan66ReadyResolve();status('기기 지정 폴더 불러오기 완료 · '+(planFolderHandle?.name||''));return true}
   catch(e){plan66Booting=true;status('지정 폴더 연결 필요: '+e.message);throw e}
   finally{if(overlay)overlay.hidden=true}
  };
@@ -7676,7 +7632,8 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   const old=planFolderHandle;planFolderHandle=next;
   try{
    // Inspect before recording a change; no files are overwritten on folder selection.
-   const existing=await readJSON(COMBINED)||await readJSON(DOCS);
+   let existing=await readJSON(COMBINED)||await readJSON(LEGACY_DOCS)||await readJSON(SETTINGS);
+   if(!existing)for await(const [name,h] of next.entries())if(h.kind==='file'&&/^[0-9]{8}-[0-9]+\.json$/.test(name)){existing=true;break}
    if(existing&&!confirm('새 폴더에 이미 계획서 자료가 있습니다.\n이 폴더의 자료를 열어 기존 폴더 연결을 바꾸시겠습니까?\n기존 폴더의 파일은 유지됩니다.')){planFolderHandle=old;return false}
    await rememberPlanFolder(next);planFolderPaused=false;
    if(existing){await loadFromFolder()}else {window.plan75NewDeviceEmpty=false;planFolderState('변경된 빈 폴더 지정: '+next.name+' · 저장 버튼을 눌러 현재 자료 저장');}
@@ -7694,26 +7651,78 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   if(data.id&&store.documents[data.id]&&!plan68Changed())return true;
   return !!(await saveDocument());
  };
- // Direct entry point, wrapper plan74 validates individual photo payload; it must flush the combined file as well.
+ // One selected plan JSON + one shared settings JSON. Search reads the document files in this folder.
  const lastSave=saveDocument;
  saveDocument=async function(){
   const ok=await lastSave();if(ok!==true)return false;
-  try{await queueWrite({plans:true,documentId:data.id});if(lastError)throw lastError;
-   const label=document.getElementById('saveStatus');if(label)label.textContent='PC 지정 폴더 저장 완료 · '+data.id;
+  try{
+   if(!await queueWrite({plans:true,documentId:data.id}))throw lastError||Error('파일을 다시 읽어 확인하지 못했습니다.');
+   const label=document.getElementById('saveStatus');if(label)label.textContent='PC 지정 폴더 저장 완료 · '+data.id+' · 계획도 이미지 '+(data.plan28Photos||[]).length+'장 확인';
+   const chip=document.getElementById('statusChip');if(chip)chip.textContent='폴더 저장됨';
+   toast(data.id+' 계획서·이미지 폴더 저장 완료');
    return true;
-  }catch(e){status('저장 실패 · 화면을 닫지 마세요: '+e.message);alert('지정 폴더 저장 실패: '+e.message);return false}
+  }catch(e){
+   const msg=e?.message||String(e);status('저장 실패 · 화면을 닫지 마세요: '+msg);
+   const chip=document.getElementById('statusChip');if(chip)chip.textContent='폴더 미저장';
+   alert('지정 폴더 저장 실패: '+msg+'\n현재 창은 닫지 마세요. 기존 파일은 임의로 삭제하지 않았습니다.');return false;
+  }
  };
  // Keep click highlight but do not change the document list order. Date-sort is based only on initial creation.
  plan18OpenDocument=async function(id){
   const selected=store.documents?.[id];if(!selected)return alert('저장된 계획서를 찾지 못했습니다.');
   if(id===data.id){toast('이미 열려 있는 계획서입니다.');return true}
-  if(!confirm('['+id+'] 계획서를 열까요? 현재 작성 중인 변경 내용은 먼저 지정 폴더에 저장합니다.'))return false;
-  if(plan18HasMeaningfulContent()&&plan68Changed()&&!await saveDocument())return false;
+  if(plan18HasMeaningfulContent()&&plan68Changed()){
+   if(!confirm('현재 계획서를 저장하고 ['+id+'] 계획서를 열까요?'))return false;
+   if(!await saveDocument())return false;
+  }
   data=plan65RuntimeDoc(copy(store.documents[id]));store.currentId=id;
-  if(!persist())return false;
+  // View-only navigation does not modify a saved plan or rewrite the folder.
+  store.draft=copy(data);
   fillFields();plan68Remember();plan18RenderAllDocuments();
   toast(id+' 계획서를 불러왔습니다.');return true;
  };
+ // Existing manual save buttons now use the same single-file folder writer;
+ // never generate a full-document archive or a dated recovery clone.
+ saveCurrentIntoPlanFolder=async function(){
+  if(plan18HasMeaningfulContent())return !!await saveDocument();
+  return await queueWrite();
+ };
+ importPlanFolderData=async function(){
+  try{await loadFromFolder();return true}catch(e){alert('지정 폴더 불러오기 실패: '+e.message);return false}
+ };
+ plan17SaveReferenceSettings=async function(){
+  try{store.plan60GlobalCustomSettings=copy(data.customSettingsValues||{});
+   return !!await queueWrite() }catch(e){alert('공통 설정 저장 실패: '+e.message);return false}
+ };
+ plan17LoadReferenceSettings=async function(){
+  try{await folderAllowed(false);const f=await readJSON(SETTINGS);
+   if(!f?.settings)throw Error('공통 설정 파일이 없습니다.');
+   if(!confirm('지정 폴더의 인력·장비·기준설정을 다시 불러올까요? 계획서는 유지됩니다.'))return false;
+   for(const k of PLAN17_REFERENCE_FIELDS)if(Object.hasOwn(f.settings,k))store[k]=copy(f.settings[k]);
+   for(const kind of ['persons','equipment','cargo'])if(Array.isArray(f.settings.registeredMasters?.[kind]))masters[kind]=copy(f.settings.registeredMasters[kind]);
+   if(Object.hasOwn(f,'gallery'))store.plan45Gallery=copy(f.gallery);
+   fillFields();renderSettingNavigation();renderPersons();renderEquipments();plan13RenderCargo();
+   return true;
+  }catch(e){alert('공통 설정 불러오기 실패: '+e.message);return false}
+ };
+ window.plan64SavePlans=async()=>plan18HasMeaningfulContent()?!!await saveDocument():!!await queueWrite();
+ window.plan64LoadPlans=importPlanFolderData;
+ // Deletion marker is kept in the shared settings file; the document remains on disk for recovery.
+ window.plan48RemoveDocument=async function(id){
+  if(!Object.hasOwn(store.documents||{},id))return false;
+  if(!confirm('['+id+'] 계획서를 목록에서 삭제할까요? 해당 JSON은 복원 가능하도록 폴더에 그대로 남깁니다.'))return false;
+  const was=copy(store.documents[id]),prev=copy(data),prevId=store.currentId;
+  const oldMark=store.planDeletedDocuments?.[id];
+  (store.planDeletedDocuments||={})[id]=now();delete store.documents[id];
+  if(data.id===id){data=empty();store.currentId=null;store.draft=null}
+  try{if(!await queueWrite())throw lastError||Error('목록 저장 실패');
+   fillFields();plan18RenderAllDocuments();toast(id+' 계획서 목록에서 삭제했습니다.');return true}
+  catch(e){store.documents[id]=was;if(oldMark===undefined)delete store.planDeletedDocuments[id];else store.planDeletedDocuments[id]=oldMark;
+   data=prev;store.currentId=prevId;fillFields();plan18RenderAllDocuments();alert('삭제 취소: '+e.message);return false}
+ };
+ const saveTop=[...document.querySelectorAll('.plan-topbar button')].find(x=>(x.getAttribute('onclick')||'').includes('saveCurrentIntoPlanFolder'));
+ if(saveTop){saveTop.textContent='현재 계획서+설정 저장';saveTop.title='현재 계획서 1건과 공통 설정만 지정 폴더에 갱신 (검색목록 파일 생성 없음)'}
+
  // Other button actions that edit a saved document must also persist the resulting record in this folder.
  for(const name of ['plan69CopyDocument','plan69EditTitle']){
   const old=window[name];if(typeof old!=='function')continue;
