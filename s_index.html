@@ -7492,14 +7492,15 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   const overlay=document.getElementById('planSafeBusyOverlay');
   if(overlay){document.getElementById('planSafeBusyMessage').textContent='기기 지정 폴더 자료 확인 중';overlay.hidden=false}
   try{await window.planImageStore.boot();await loadFromFolder();plan66Booting=false;plan66ReadyResolve();status('기기 지정 폴더 불러오기 완료 · '+(planFolderHandle?.name||''));return true}
-  catch(e){plan66Booting=true;status('지정 폴더 연결 필요: '+e.message);throw e}
+  catch(e){plan66Booting=false;plan66ReadyResolve();status('지정 폴더 연결 필요: '+e.message);throw e}
   finally{if(overlay)overlay.hidden=true}
  };
  window.plan75FolderApprove=async function(){
   if(!planFolderHandle)planFolderHandle=await recallPlanFolder();
   if(!planFolderHandle)throw Error('지정된 폴더가 없습니다.');
   if(!await planFolderPermission(true))throw Error('폴더 접근을 허용하지 않았습니다.');
-  return window.plan73RequireEdit();
+  await window.plan73RetryFolderLoad?.();
+  return true;
  };
  // Changing folders is an explicit action, not an automatic fall-back to any arbitrary PC directory.
  choosePlanFolder=async function(){
@@ -7518,6 +7519,7 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
    if(existing&&!confirm('새 폴더에 이미 계획서 자료가 있습니다.\n이 폴더의 자료를 열어 기존 폴더 연결을 바꾸시겠습니까?\n기존 폴더의 파일은 유지됩니다.')){planFolderHandle=old;return false}
    await rememberPlanFolder(next);planFolderPaused=false;
    if(existing){await loadFromFolder()}else {window.plan75NewDeviceEmpty=false;planFolderState('변경된 빈 폴더 지정: '+next.name+' · 저장 버튼을 눌러 현재 자료 저장');}
+   await window.plan73RetryFolderLoad?.();
    return true;
   }catch(e){planFolderHandle=old;if(old)await rememberPlanFolder(old);throw e}
  };
@@ -7625,7 +7627,7 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   const settingsHost=document.getElementById('planDataPane_settings');
   if(settingsHost){const bar=document.createElement('div');bar.className='plan-folder-section';bar.style.cssText='padding:10px;margin:8px 0;border:1px solid #bad1e8;border-radius:8px;background:#f5faff';
    const label=document.createElement('b');label.textContent='🖼 그림칸 폴더 (계획서 저장 폴더와 별도 지정)';const info=document.createElement('div');info.id='planImageFolderStatus';info.style.fontSize='12px';
-   const change=document.createElement('button');change.type='button';change.className='btn';change.textContent='그림칸 폴더 지정·변경';change.onclick=async()=>{try{if(await window.planImageStore.selectFolder()){info.textContent='현재: '+window.planImageStore.name;window.plan50RefreshGallery?.()}}catch(e){alert(e.message)}};
+   const change=document.createElement('button');change.type='button';change.className='btn';change.textContent='그림칸 폴더 지정·변경';change.onclick=async()=>{try{if(await window.planImageStore.selectFolder()){info.textContent='현재: '+window.planImageStore.name;await window.plan73RetryFolderLoad?.();window.plan50RefreshGallery?.()}}catch(e){alert(e.message)}};
    bar.append(label,info,change);settingsHost.prepend(bar);info.textContent='현재: '+(window.planImageStore.name||'미지정');
   }
  const saveTop=[...document.querySelectorAll('.plan-topbar button')].find(x=>(x.getAttribute('onclick')||'').includes('saveCurrentIntoPlanFolder'));
@@ -7652,11 +7654,11 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
 (()=>{
  const ROOT=document.documentElement, CREDENTIAL='safeplan_server_device_v1';
  const gate=document.createElement('section');gate.id='plan73AccessGate';gate.setAttribute('role','alertdialog');gate.setAttribute('aria-modal','true');
- gate.innerHTML='<div class="plan73-box"><h2>🔒 안전 작업계획서 · 기기 권한 확인</h2><p id="plan73AccessMessage">등록기기 사용 권한을 확인하고 있습니다.</p><button id="plan73Retry" type="button">권한 다시 확인</button> <button id="plan73ImageReconnect" type="button" hidden>그림칸 폴더 지정·재연결</button> <button id="plan73DataApprove" type="button" hidden>저장 폴더 접근 승인</button></div>';
+ gate.innerHTML='<div class="plan73-box"><h2>🔒 안전 작업계획서 · 기기 권한 확인</h2><p id="plan73AccessMessage">등록기기 사용 권한을 확인하고 있습니다.</p><button id="plan73Retry" type="button">권한 다시 확인</button></div>';
  document.body.append(gate);
  const message=document.getElementById('plan73AccessMessage');
  const $=id=>document.getElementById(id);
- let state='checking',role='',booted=false,booting=null,pending=null,folderError='';
+ let state='checking',role='',booted=false,booting=null,pending=null,folderError='',folderNeedsAttention=false;
  const credentials=()=>{try{const c=JSON.parse(localStorage.getItem(CREDENTIAL)||'null');return c?.deviceId&&c?.deviceToken?c:null}catch(_){return null}};
  const permitted=()=>state==='active'||state==='readonly';
  const writeAllowed=()=>state==='active';
@@ -7670,10 +7672,6 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   gate.hidden=allowed||state==='unregistered';
   const re=($('plan73Retry'));
   re.hidden=state==='unregistered';
-  // A registered master remains a master even if a local folder needs reconnecting.
-  const repair=next==='folder-setup'&&!!role;
-  $('plan73ImageReconnect').hidden=!(repair&&/그림칸/.test(folderError));
-  $('plan73DataApprove').hidden=!(repair&&!/그림칸/.test(folderError));
   message.textContent=detail||({checking:'서버에서 등록기기 권한을 확인하고 있습니다.',unregistered:'등록코드를 발급받아 먼저 기기를 등록하세요.',suspended:'마스터가 이 기기의 사용을 중지했습니다. 계획서 화면 및 폴더 불러오기와 저장을 사용할 수 없습니다.',disconnected:'서버에서 기기 사용권한을 확인하지 못했습니다. 보안을 위해 안전 작업계획서를 잠갔습니다. 인터넷 연결을 확인한 뒤 다시 시도하세요.'}[next]||'');
   if(!allowed){
    const onboard=$('plan72Gate');if(onboard&&next!=='unregistered')onboard.hidden=true;
@@ -7710,33 +7708,40 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
    }
    role=r.role;
    if(options.write&&role==='viewer'){paint('readonly','이 기기는 조회 전용으로 승인되었습니다. 수정·신규·저장 기능은 허용되지 않습니다.');return false;}
-   // Only release the screen after both approved access and the assigned folders load.
-   try{
-    await startStorage();
-    folderError='';
-    paint(role==='viewer'?'readonly':'active');
-    if(role==='viewer'){const editNotice=$('plan70Status');if(editNotice)editNotice.textContent='조회 전용 기기 · 변경 및 저장 불가';}
-    return true;
-   }catch(e){
-    folderError=String(e?.message||e||'폴더 연결 실패');
-    paint('folder-setup','기기 사용권한 확인 완료 ('+(role==='master'?'마스터':role==='viewer'?'조회 전용':'사용 승인')+').\n'+folderError+'\n아래 버튼에서 해당 폴더를 다시 연결해 주세요.');
-    return false;
+   // Master/editor/viewer approval opens the app regardless of local folder status.
+   // Folder connection is handled afterwards by existing Settings controls.
+   paint(role==='viewer'?'readonly':'active');
+   if(role==='viewer'){const editNotice=$('plan70Status');if(editNotice)editNotice.textContent='조회 전용 기기 · 변경 및 저장 불가';}
+   if(!booted&&!folderNeedsAttention){
+    try{await startStorage();folderError='';}
+    catch(e){
+     folderNeedsAttention=true;
+     folderError=String(e?.message||e||'폴더 연결 실패');
+     if(typeof planFolderState==='function')planFolderState('기기 사용 승인 완료 · 폴더 연결 필요: '+folderError);
+     const imageStatus=$('planImageFolderStatus');
+     if(imageStatus&&/그림칸/.test(folderError))imageStatus.textContent='그림칸 폴더 재연결 필요: '+folderError;
+     if(typeof switchPlanInputTab==='function')switchPlanInputTab('settings');
+    }
    }
+   return true;
   })();
   try{return await pending}finally{pending=null}
  }
  window.plan73AuthorizeNewDevice=async()=>{if(!await requestFresh())throw Error('기기 등록 이후 서버의 사용 승인을 확인하지 못했습니다.');};
  window.plan73RequireEdit=async()=>{if(!await requestFresh({write:true})){if(state==='readonly')alert('이 기기는 조회 전용입니다.');return false;}return true;};
  $('plan73Retry').onclick=()=>requestFresh();
- $('plan73ImageReconnect').onclick=async()=>{
-  try{
-   const selected=await window.planImageStore.selectFolder();
-   if(selected)await requestFresh();
-  }catch(e){folderError=String(e?.message||e);paint('folder-setup','그림칸 폴더 연결 실패: '+folderError);}
- };
- $('plan73DataApprove').onclick=async()=>{
-  try{await window.plan75FolderApprove();await requestFresh()}
-  catch(e){folderError=String(e?.message||e);paint('folder-setup','저장 폴더 접근 승인 실패: '+folderError)}
+ // The normal Settings folder buttons are the only recovery controls.
+ window.plan73RetryFolderLoad=async()=>{
+  if(!permitted())return false;
+  if(booted)return true;
+  folderNeedsAttention=false;
+  try{await startStorage();folderError='';return true;}
+  catch(e){
+   folderNeedsAttention=true;
+   folderError=String(e?.message||e||'폴더 연결 실패');
+   if(typeof planFolderState==='function')planFolderState('폴더 연결 필요: '+folderError);
+   return false;
+  }
  };
  // Revoke an already-open page at the next check, on focus, or before a material operation.
  setInterval(()=>{if(credentials()&&!document.hidden)requestFresh()},12000);
