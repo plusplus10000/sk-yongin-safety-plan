@@ -636,7 +636,7 @@ body.plan-dragging{cursor:col-resize!important;user-select:none!important}
 /* 좁은 그림카드: 이미지는 클릭·Ctrl+V·드롭으로 등록. 삭제는 테두리 안 우측 상단 작은 버튼만. */
 #plan45Gallery .plan45-gallery-picture{position:relative!important;outline-offset:1px;cursor:pointer}
 #plan45Gallery .plan45-gallery-picture:focus-visible{outline:2px solid #0878f9!important}
-#plan45Gallery .plan49-card-delete{position:absolute;top:3px;right:3px;z-index:5;display:grid;place-items:center;width:19px;height:19px;padding:0;border:1px solid #d28b99;border-radius:3px;background:#fff9fbf2;color:#b52237;font-size:14px;line-height:1;font-weight:900;cursor:pointer;box-shadow:0 1px 3px #0002}
+#plan45Gallery .plan49-card-delete{position:absolute;top:3px;right:3px;z-index:5;display:grid;place-items:center;width:35px;min-height:19px;padding:1px 2px;border:1px solid #d28b99;border-radius:3px;background:#fff9fbf2;color:#b52237;font-size:10px;line-height:1.1;font-weight:900;cursor:pointer;box-shadow:0 1px 3px #0002}
 #plan45Gallery .plan49-card-delete:hover{background:#fbe2e5;color:#8e1729}
 #plan45Gallery .plan45-gallery-actions{display:none!important}
 #plan45Gallery .plan45-gallery-picture>span{font-size:11px;padding:4px;text-align:center;line-height:1.6;color:#667c96}
@@ -5627,7 +5627,10 @@ remove.onclick=async()=>{const rec=chosenPhoto();if(!rec||photoLocked(rec))retur
  const has=ref=>cache.has(ref);
  const peek=ref=>cache.get(ref)||'';
  async function preload(){await open();cache.clear();for await(const [filename,h] of folder.entries())if(h.kind==='file'&&/\.(?:png|jpg|jpeg|webp)$/i.test(filename))await get(filename);window.plan50RefreshGallery?.();return cache.size}
- async function write(ref,file){await open();if(!/^[-\w.]+\.(png|jpg|jpeg|webp)$/i.test(ref))throw Error('안전하지 않은 그림 파일명입니다.');const h=await folder.getFileHandle(ref,{create:true});const w=await h.createWritable();try{await w.write(file);await w.close()}catch(e){await w.abort().catch(()=>{});throw e}cache.set(ref,await bytes(file));return ref}
+ async function write(ref,file){await open();if(!/^[-\w.]+\.(png|jpg|jpeg|webp)$/i.test(ref))throw Error('안전하지 않은 그림 파일명입니다.');
+  // Never overwrite a registered image: only newly generated unique file names may be created.
+  try{await folder.getFileHandle(ref);throw Error('이미 등록된 그림 파일은 덮어쓸 수 없습니다: '+ref)}catch(e){if(e.name!=='NotFoundError')throw e}
+  const h=await folder.getFileHandle(ref,{create:true});const w=await h.createWritable();try{await w.write(file);await w.close()}catch(e){await w.abort().catch(()=>{});throw e}cache.set(ref,await bytes(file));return ref}
  async function add(file,id){if(!file||!/^image\/(?:png|jpeg|webp)$/i.test(file.type))throw Error('PNG, JPG, WebP만 등록할 수 있습니다.');if(file.size>15*1024*1024)throw Error('이미지는 15MB 이하로 등록하세요.');const ext=file.type==='image/jpeg'?'jpg':file.type==='image/webp'?'webp':'png';return write('user_'+String(id).replace(/[^-\w]/g,'')+'.'+ext,file)}
  async function hydrateDoc(doc){
   if(!doc||!Array.isArray(doc.plan28Photos))return doc;
@@ -5667,44 +5670,10 @@ remove.onclick=async()=>{const rec=chosenPhoto();if(!rec||photoLocked(rec))retur
   for(const [id,doc] of Object.entries(store.documents||{}))inspect(id,doc);if(data?.plan28Photos?.length)inspect(data.id||'현재 미저장 계획서',data);
   if(planFolderHandle&&await planFolderPermission(false))for await(const [filename,h] of planFolderHandle.entries()){if(h.kind!=='file'||!/^[0-9]{8}-[0-9]+\.json$/.test(filename))continue;try{const obj=JSON.parse(await(await h.getFile()).text());inspect(obj.id||filename.slice(0,-5),obj.document)}catch(e){console.warn('그림 사용처 확인 불가',filename,e)}}
   return {ids:[...ids].sort(),positions};}
- async function trashIndex(){const dir=await (await open()).getDirectoryHandle('삭제목록',{create:true});let list=[];try{const file=await(await dir.getFileHandle('목록.json')).getFile();list=JSON.parse(await file.text()).items||[]}catch(e){if(e.name!=='NotFoundError')throw e}return {dir,list}}
- async function saveTrashIndex(dir,list){const h=await dir.getFileHandle('목록.json',{create:true}),w=await h.createWritable();try{await w.write(JSON.stringify({version:1,items:list},null,2));await w.close()}catch(e){await w.abort().catch(()=>{});throw e}}
- async function trash(item){const ref=item.imageRef,found=await refs(ref),msg='['+(item.description||ref)+'] 사용 계획서: '+(found.ids.length?'\n'+found.ids.join('\n'):'없음')+'\n\n일반 삭제는 그림삽입 목록에서만 숨기며, 기존 계획도의 배치 이미지는 그대로 보존됩니다.\n삭제목록에서 복원하거나 별도로 완전삭제할 수 있습니다.\n삭제목록으로 옮길까요?';if(!confirm(msg))return false;
-  const f=await open();const file=await(await f.getFileHandle(ref)).getFile();const {dir,list}=await trashIndex();const entry={...item,deletedAt:new Date().toISOString(),affectedDocuments:found.ids,positions:found.positions};if(list.some(x=>x.imageRef===ref))throw Error('삭제목록에 동일한 파일이 있습니다. 먼저 복원해 주세요.');
-  const dest=await dir.getFileHandle(ref,{create:true}),w=await dest.createWritable();await w.write(file);await w.close();if((await dest.getFile()).size!==file.size)throw Error('삭제목록 파일 검증에 실패했습니다.');await saveTrashIndex(dir,[...list,entry]);await f.removeEntry(ref);
-  // Keep image bytes in memory and accessible from trash for already placed drawings.
-  cache.set(ref,await bytes(file));
-  return true}
+ // Historical image records may exist in the old 삭제목록 folder.
+ // Keep legacy access read-only: the new UI only toggles gallery visibility metadata.
  async function listTrash(){try{const dir=await(await open()).getDirectoryHandle('삭제목록');const file=await(await dir.getFileHandle('목록.json')).getFile();return JSON.parse(await file.text()).items||[]}catch(e){if(e.name==='NotFoundError')return [];throw e}}
- async function restore(ref){const f=await open(),{dir,list}=await trashIndex(),info=list.find(x=>x.imageRef===ref);if(!info)throw Error('삭제목록에 없는 이미지입니다.');const file=await(await dir.getFileHandle(ref)).getFile();try{await f.getFileHandle(ref);throw Error('그림칸에 같은 이름이 이미 있습니다.')}catch(e){if(e.name!=='NotFoundError')throw e}
-  await write(ref,file);await saveTrashIndex(dir,list.filter(x=>x.imageRef!==ref));await dir.removeEntry(ref);
-  for(const doc of Object.values(store.documents||{}))for(const p of doc.plan28Photos||[])if(p.imageRef===ref)p.src=peek(ref);
-  for(const p of data.plan28Photos||[])if(p.imageRef===ref)p.src=peek(ref);
-  if(data?.plan28Photos){data.plan28Photos=data.plan28Photos.slice();syncPreview()};return info}
- async function permanentlyDelete(ref){
-  const f=await open(),{dir,list}=await trashIndex();
-  const info=list.find(x=>x.imageRef===ref);if(!info)throw Error('삭제목록에서 파일을 찾지 못했습니다.');
-  const found=await refs(ref);
-  let file;try{file=await(await dir.getFileHandle(ref)).getFile()}catch(e){throw Error('원본을 확인할 수 없습니다. 완전삭제를 중단합니다: '+e.message)}
-  if(!file.size)throw Error('원본 파일이 비어 있어 완전삭제를 중단합니다.');
-  const documents=found.ids.length?found.ids.join(', '):'없음';
-  if(!confirm('['+(info.description||ref)+'] 완전삭제\n사용 계획서: '+documents+'\n\n원본 파일을 영구 제거하면 기존 계획도에서도 해당 이미지는 표시되지 않습니다.\n계획서의 다른 사진과 배치 정보는 유지됩니다.\n\n정말 완전삭제하시겠습니까?'))return false;
-  // Preserve the decision in settings BEFORE deleting image bytes. No plan JSON is rewritten.
-  store.plan45Gallery||={hidden:[],items:[],notes:{}};
-  const gallery=store.plan45Gallery,previous=[...(gallery.permanentlyDeleted||[])];
-  gallery.permanentlyDeleted=[...new Set([...previous,ref])];
-  try{if(!plan45SaveLibrary()||!window.planImageCommitSettings||!await window.planImageCommitSettings())throw Error('완전삭제 상태를 저장하지 못했습니다.')}catch(e){gallery.permanentlyDeleted=previous;throw e}
-  try{
-   await dir.removeEntry(ref);
-   await saveTrashIndex(dir,list.filter(x=>x.imageRef!==ref));
-  }catch(e){throw Error('파일/목록 완전삭제 확인이 필요합니다: '+e.message)}
-  cache.delete(ref);
-  for(const doc of Object.values(store.documents||{}))for(const pic of doc?.plan28Photos||[])if(pic.imageRef===ref)delete pic.src;
-  for(const pic of data?.plan28Photos||[])if(pic.imageRef===ref)delete pic.src;
-  if(data?.plan28Photos){data.plan28Photos=data.plan28Photos.slice();syncPreview()}
-  return true;
- }
- const api={get folder(){return folder},get name(){return folder?.name||''},selectFolder:pick,bind,open,get,peek,has,preload,add,hydrateDoc,compactDoc,refs,trash,listTrash,restore,permanentlyDelete,permission,useDefault,verifyDoc,refreshDocuments,notifyFolder,async boot(){await useDefault();await open();return preload()}};
+ const api={get folder(){return folder},get name(){return folder?.name||''},selectFolder:pick,bind,open,get,peek,has,preload,add,hydrateDoc,compactDoc,refs,listTrash,permission,useDefault,verifyDoc,refreshDocuments,notifyFolder,async boot(){await useDefault();await open();return preload()}};
  window.planImageStore=api;
 })();
 </script>
@@ -5967,7 +5936,7 @@ if(plan17IncomingSettings?.settings?.plan45Gallery)store.plan45Gallery=structure
 if(!store.plan45Gallery||typeof store.plan45Gallery!=='object')store.plan45Gallery={hidden:[],items:[],notes:{}};
 const library=()=>store.plan45Gallery;
 const seeds=[{"id":"excel_3_2","description":"기준표","imageRef":"excel_3_2.png"},{"id":"excel_1_0","description":"T/L 수직","imageRef":"excel_1_0.png"},{"id":"excel_0_0","description":"T/L 굴절","imageRef":"excel_0_0.png"},{"id":"excel_0_2","description":"신호수","imageRef":"excel_0_2.png"},{"id":"excel_1_2","description":"유도원이냐","imageRef":"excel_1_2.png"},{"id":"excel_2_2","description":"너는 모냐","imageRef":"excel_2_2.png"},{"id":"excel_2_0","description":"콘","imageRef":"excel_2_0.png"},{"id":"excel_2_4","description":"여자","imageRef":"excel_2_4.png"},{"id":"excel_1_4","description":"남자","imageRef":"excel_1_4.png"},{"id":"excel_0_6","description":"9F SKHAJH","imageRef":"excel_0_6.png"},{"id":"excel_3_4","description":"B1 SSSSS","imageRef":"excel_3_4.png"},{"id":"excel_svg_10","description":"사람 실루엣 (SVG)","imageRef":"excel_svg_10.png"}];
-function plan45GalleryItems(){const val=library(),items=[...seeds.filter(x=>!(val.hidden||[]).includes(x.id)).map(x=>({...x,description:val.notes?.[x.id]??x.description,isSeed:true,src:window.planImageStore.peek(x.imageRef)})),...(val.items||[]).map(x=>({...x,isSeed:false,src:window.planImageStore.peek(x.imageRef)}))];
+function plan45GalleryItems(){const val=library(),items=[...seeds.filter(x=>!(val.hidden||[]).includes(x.id)).map(x=>({...x,description:val.notes?.[x.id]??x.description,isSeed:true,src:window.planImageStore.peek(x.imageRef)})),...(val.items||[]).filter(x=>!(val.hidden||[]).includes(x.id)).map(x=>({...x,isSeed:false,src:window.planImageStore.peek(x.imageRef)}))];
  const order=Array.isArray(val.order)?val.order:[],ranks=new Map(order.map((id,i)=>[id,i]));return items.sort((a,b)=>(ranks.get(a.id)??9999)-(ranks.get(b.id)??9999))}
 function plan45SaveLibrary(){return persist()}
 async function galleryCommit(){if(!plan45SaveLibrary())throw Error('그림칸 관리정보 반영 실패');if(window.planImageCommitSettings&&!await window.planImageCommitSettings())throw Error('그림칸 목록 저장 실패');}
@@ -5978,47 +5947,66 @@ function plan45AddImageToPlan(item){const src=window.planImageStore.peek(item.im
  const img=new Image();img.onload=()=>{const sc=Math.min(230/img.naturalWidth,230/img.naturalHeight,1),w=Math.max(18,Math.round(img.naturalWidth*sc)),h=Math.max(18,Math.round(img.naturalHeight*sc)),pics=Array.isArray(data.plan28Photos)?data.plan28Photos:[];
  const off=(pics.length%5)*16;data.plan28Photos=[...pics,{id:'plan28-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),imageRef:item.imageRef,x:Math.round((w0-w)/2+off),y:Math.round((h0-h)/2+off),w,h,rotate:0,locked:false,src}];persist();plan16SelectTab('core_2');syncPreview();toast('그림을 배치했습니다. 계획서 저장 버튼으로 확정해 주세요.');};img.src=src}
 let galleryArchived=false,gallerySearch='';
-async function galleryRestore(host){
- host.replaceChildren(make('p','plan45-gallery-note','삭제 항목 불러오는 중…'));
+async function plan45HiddenGalleryItems(){
+ const val=library(),hidden=new Set(val.hidden||[]),items=[];
+ for(const x of seeds)if(hidden.has(x.id))items.push({...x,description:val.notes?.[x.id]??x.description,isSeed:true});
+ for(const x of val.items||[])if(hidden.has(x.id))items.push({...x,isSeed:false});
+ // Old versions physically moved hidden files to 삭제목록. Show them here without moving,
+ // deleting, or rewriting any of those original files.
  try{
-  const list=await window.planImageStore.listTrash();if(!host.isConnected)return;host.replaceChildren();
+  const legacy=await window.planImageStore.listTrash();
+  const restored=new Set(val.legacyUnhiddenRefs||[]);
+  for(const x of legacy){
+   if(restored.has(x.imageRef)||items.some(y=>y.id===x.id||y.imageRef&&y.imageRef===x.imageRef))continue;
+   if((val.items||[]).some(y=>y.imageRef&&y.imageRef===x.imageRef))continue;
+   items.push({...x,isSeed:!!x.isSeed,legacy:true});
+  }
+ }catch(e){console.warn('이전 숨김 목록 읽기 불가; 현재 저장 목록만 표시:',e)}
+ return items;
+}
+async function galleryRestore(host){
+ host.replaceChildren(make('p','plan45-gallery-note','숨김항목 불러오는 중…'));
+ try{
+  const list=await plan45HiddenGalleryItems();if(!host.isConnected)return;host.replaceChildren();
   const query=gallerySearch.trim().toLocaleLowerCase();
-  const filtered=list.filter(item=>((item.description||'')+' '+item.imageRef).toLocaleLowerCase().includes(query));
-  if(!filtered.length){host.append(make('p','plan45-gallery-note',list.length?'검색 결과가 없습니다.':'삭제된 그림이 없습니다.'));return}
+  const filtered=list.filter(item=>((item.description||'')+' '+(item.imageRef||'')).toLocaleLowerCase().includes(query));
+  if(!filtered.length){host.append(make('p','plan45-gallery-note',list.length?'검색 결과가 없습니다.':'숨김 처리한 그림이 없습니다.'));return}
   const grid=make('div','plan45-gallery-grid plan45-trash-grid');host.append(grid);
   for(const item of filtered){
    const card=make('article','plan45-gallery-card plan45-trash-card');
    const image=make('div','plan45-gallery-picture');
-   image.append(make('span','','그림 원본 확인 중…'));
-   // Read-only thumbnail. Clicks in deleted list never put an image on the plan.
-   window.planImageStore.get(item.imageRef).then(src=>{
-    if(!image.isConnected)return;
-    image.replaceChildren();
-    if(src){const img=make('img');img.src=src;img.alt=item.description||'삭제된 이미지';img.loading='lazy';img.style.cursor='default';image.append(img)}
+   image.append(make('span','',item.imageRef?'그림 원본 확인 중…':'빈 그림칸'));
+   // The hidden list is read-only. Clicking a thumbnail cannot place or replace an image.
+   if(item.imageRef)window.planImageStore.get(item.imageRef).then(src=>{
+    if(!image.isConnected)return;image.replaceChildren();
+    if(src){const img=make('img');img.src=src;img.alt=item.description||'숨김 이미지';img.loading='lazy';img.style.cursor='default';image.append(img)}
     else image.append(make('span','','그림 파일 없음 · 폴더 확인'));
    }).catch(()=>{if(image.isConnected)image.replaceChildren(make('span','','그림 파일 확인 필요'))});
-   const desc=make('div','plan45-gallery-desc plan45-trash-description',item.description||item.imageRef);desc.title=item.imageRef;
+   const desc=make('div','plan45-gallery-desc plan45-trash-description',item.description||item.imageRef||'빈 그림칸');desc.title=item.imageRef||'';
    const buttons=make('div','plan45-trash-actions');
-   const restore=make('button','btn smallbtn','복원');restore.type='button';
-   restore.onclick=async e=>{e.preventDefault();e.stopPropagation();restore.disabled=true;purge.disabled=true;try{
-    await window.planImageStore.restore(item.imageRef);
-    if(item.isSeed)library().hidden=(library().hidden||[]).filter(x=>x!==item.id);
-    else if(!(library().items||[]).some(x=>x.id===item.id))library().items.push({id:item.id,description:item.description,imageRef:item.imageRef});
-    await galleryCommit();plan45RenderGallery();toast('그림을 복원했습니다.');
-   }catch(e){alert('복원 실패: '+e.message);restore.disabled=false;purge.disabled=false}};
-   const purge=make('button','btn smallbtn danger','완전삭제');purge.type='button';
-   purge.onclick=async e=>{e.preventDefault();e.stopPropagation();purge.disabled=true;restore.disabled=true;try{
-    if(await window.planImageStore.permanentlyDelete(item.imageRef)){plan45RenderGallery();toast('그림 파일을 완전삭제했습니다.')}else{purge.disabled=false;restore.disabled=false}
-   }catch(e){alert('완전삭제 실패: '+e.message);purge.disabled=false;restore.disabled=false}};
-   buttons.append(restore,purge);
-   card.append(image,desc,buttons);grid.append(card);
+   const restore=make('button','btn smallbtn','숨김 해제');restore.type='button';
+   restore.onclick=async e=>{
+    e.preventDefault();e.stopPropagation();if(restore.disabled)return;restore.disabled=true;
+    const previousHidden=[...(library().hidden||[])],previousItems=[...(library().items||[])],previousRefs=[...(library().legacyUnhiddenRefs||[])];
+    try{
+     library().hidden=previousHidden.filter(x=>x!==item.id);
+     if(item.legacy){
+      // Keep the old image file in its original old-version directory. Do not touch its bytes.
+      library().legacyUnhiddenRefs=[...new Set([...previousRefs,item.imageRef])];
+      if(item.isSeed){library().hidden=library().hidden.filter(x=>x!==item.id)}
+      else if(!(library().items||[]).some(x=>x.id===item.id))library().items.push({id:item.id,imageRef:item.imageRef,description:item.description||''});
+     }
+     await galleryCommit();plan45RenderGallery();toast('숨김을 해제했습니다. 원본 그림 파일은 그대로 유지됩니다.');
+    }catch(err){library().hidden=previousHidden;library().items=previousItems;library().legacyUnhiddenRefs=previousRefs;alert('숨김 해제 실패: '+err.message);restore.disabled=false}
+   };
+   buttons.append(restore);card.append(image,desc,buttons);grid.append(card);
   }
- }catch(e){if(host.isConnected)host.replaceChildren(make('p','plan45-gallery-note','삭제 목록 확인: '+e.message))}
+ }catch(e){if(host.isConnected)host.replaceChildren(make('p','plan45-gallery-note','숨김항목 확인: '+e.message))}
 }
 function plan45RenderGallery(){libraryPanel.replaceChildren();const title=make('div','section-title');const heading=make('div','labelleft');heading.append(make('span','n','5'),make('strong','','그림삽입'));title.append(heading);
  const choose=make('button','btn smallbtn','📁 그림칸 폴더 변경');choose.onclick=async()=>{try{if(await window.planImageStore.selectFolder())plan45RenderGallery()}catch(e){alert(e.message)}};
- const restore=make('button','btn smallbtn plan13-archived-toggle',galleryArchived?'삭제 항목 접기':'삭제 항목 보기');restore.id='plan13ArchivedBtn_images';restore.type='button';
- window.planImageStore.listTrash().then(items=>{if(restore.isConnected&&!galleryArchived)restore.textContent='삭제 항목 '+items.length+'개 보기'}).catch(()=>{});restore.setAttribute('aria-expanded',String(galleryArchived));restore.onclick=()=>{galleryArchived=!galleryArchived;plan45RenderGallery()};
+ const restore=make('button','btn smallbtn plan13-archived-toggle',galleryArchived?'숨김항목 접기':'숨김항목 보기');restore.id='plan13ArchivedBtn_images';restore.type='button';
+ plan45HiddenGalleryItems().then(items=>{if(restore.isConnected&&!galleryArchived)restore.textContent='숨김항목 '+items.length+'개 보기'}).catch(()=>{});restore.setAttribute('aria-expanded',String(galleryArchived));restore.onclick=()=>{galleryArchived=!galleryArchived;plan45RenderGallery()};
  const slot=make('button','btn smallbtn','＋ 그림칸');slot.type='button';slot.onclick=async()=>{
   const item={id:'image_'+uid(),imageRef:'',description:''};
   library().items.push(item);
@@ -6028,7 +6016,7 @@ function plan45RenderGallery(){libraryPanel.replaceChildren();const title=make('
   }catch(e){library().items=library().items.filter(x=>x.id!==item.id);alert('그림칸 추가 실패: '+e.message)}
  };
  const add=make('button','btn smallbtn','＋ 이미지 등록'),input=make('input');input.type='file';input.accept='image/png,image/jpeg,image/webp';input.hidden=true;add.onclick=()=>input.click();input.onchange=async()=>{const file=input.files?.[0];if(!file)return;const id='image_'+uid();try{const imageRef=await window.planImageStore.add(file,id);library().items.push({id,imageRef,description:file.name});await galleryCommit();plan45RenderGallery()}catch(e){alert('이미지 등록 실패: '+e.message)}};
- title.append(slot,add,restore,input);libraryPanel.append(title);libraryPanel.append(make('p','plan45-gallery-note','그림칸 클릭 후 Ctrl+V: 이미지 붙여넣기 · 등록 그림 클릭: 계획도에 배치 · 원본은 로컬 그림칸 폴더에 보관'));
+ title.append(slot,add,restore,input);libraryPanel.append(title);libraryPanel.append(make('p','plan45-gallery-note','빈 그림칸 클릭 후 Ctrl+V: 이미지 등록 · 기존 그림 교체 불가 · 등록 그림 클릭: 계획도에 배치 · 그림은 숨김만 가능'));
  const state=make('p','plan45-gallery-note','이미지 폴더: '+(window.planImageStore.name||'그림칸 · 기본: 안전-기초/그림칸'));const folderRow=make('div','plan45-gallery-folder');folderRow.append(state,choose);libraryPanel.append(folderRow);
  const searchRow=make('div','plan-record-search plan45-gallery-search');const search=make('input');search.type='search';search.placeholder='그림 설명 · 파일명 검색';search.setAttribute('aria-label','그림 검색');search.value=gallerySearch;
  const searchButton=make('button','btn smallbtn','검색');searchButton.type='button';
@@ -6037,31 +6025,35 @@ function plan45RenderGallery(){libraryPanel.replaceChildren();const title=make('
  if(galleryArchived){galleryRestore(results);return}
  const query=gallerySearch.trim().toLocaleLowerCase();
  const grid=make('div','plan45-gallery-grid');for(const item of plan45GalleryItems().filter(item=>((item.description||'')+' '+item.imageRef).toLocaleLowerCase().includes(query))){const card=make('article','plan45-gallery-card');card.dataset.imageId=item.id;
-  const image=make('div','plan45-gallery-picture');image.tabIndex=0;image.setAttribute('role','button');image.title=item.imageRef?'클릭하면 계획도에 배치 · 이 그림칸에서 Ctrl+V로 교체 가능':'클릭 후 Ctrl+V로 이미지를 붙여넣기';if(item.src){const img=make('img');img.src=item.src;img.alt=item.description||'그림';img.loading='lazy';image.append(img)}else image.append(make('span','',item.imageRef?'그림 파일 없음 · 폴더 연결 확인':'빈 그림칸 · Ctrl+V 붙여넣기'));
+  const image=make('div','plan45-gallery-picture');image.tabIndex=0;image.setAttribute('role','button');image.title=item.imageRef?'클릭하면 계획도에 배치 · 원본 이미지는 변경할 수 없습니다.':'빈 그림칸에서만 Ctrl+V로 이미지를 붙여넣기';if(item.src){const img=make('img');img.src=item.src;img.alt=item.description||'그림';img.loading='lazy';image.append(img)}else image.append(make('span','',item.imageRef?'그림 파일 없음 · 폴더 연결 확인':'빈 그림칸 · Ctrl+V 붙여넣기'));
   image.onclick=()=>{image.focus();if(item.imageRef)plan45AddImageToPlan(item)};
   image.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&item.imageRef){e.preventDefault();plan45AddImageToPlan(item)}};
   image.addEventListener('paste',async e=>{
    const file=[...(e.clipboardData?.items||[])].find(x=>/^image\/(?:png|jpeg|webp)$/i.test(x.type))?.getAsFile();
    if(!file)return;
    e.preventDefault();e.stopPropagation();
+   if(item.imageRef){toast('이미 등록된 그림은 교체할 수 없습니다. [+그림칸]으로 새 그림을 등록하세요.');return;}
    if(image.dataset.pasting==='1')return;
    image.dataset.pasting='1';image.setAttribute('aria-busy','true');
    try{
     const rec=library().items.find(x=>x.id===item.id);
     if(!rec){throw Error(item.isSeed?'기본 그림은 변경하지 않고 [+그림칸]을 만들어 붙여넣으세요.':'그림칸을 찾지 못했습니다.');}
+    if(rec.imageRef)throw Error('이미 등록된 그림은 변경할 수 없습니다.');
     const ref=await window.planImageStore.add(file,'paste_'+uid());
-    const before=rec.imageRef;rec.imageRef=ref;
-    try{await galleryCommit()}catch(err){rec.imageRef=before;throw err}
-    // The previous file is intentionally retained for existing plan references.
+    rec.imageRef=ref;
+    try{await galleryCommit()}catch(err){rec.imageRef='';throw err}
+    // Image contents remain immutable once registered; already placed plans are unaffected.
     plan45RenderGallery();toast('그림칸 안에 이미지 붙여넣기 완료');
    }catch(err){alert('그림칸 붙여넣기 실패: '+err.message)}
    finally{image.dataset.pasting='';image.removeAttribute('aria-busy')}
   });
   const desc=make('textarea','plan45-gallery-desc');desc.value=item.description||'';desc.rows=2;desc.placeholder='그림 설명';desc.onchange=async()=>{if(item.isSeed){library().notes[item.id]=desc.value}else{const rec=library().items.find(x=>x.id===item.id);if(rec)rec.description=desc.value}try{await galleryCommit()}catch(e){alert(e.message)}};
-  const del=make('button','plan49-card-delete','−');del.title='사용 계획서 안내 후 삭제목록 이동';del.onpointerdown=e=>e.stopPropagation();del.onkeydown=e=>e.stopPropagation();del.onclick=async e=>{e.preventDefault();e.stopPropagation();try{
-   if(!item.imageRef){if(!confirm('빈 그림칸을 삭제할까요? 다른 이미지와 계획서는 유지됩니다.'))return;library().items=library().items.filter(x=>x.id!==item.id);await galleryCommit();plan45RenderGallery();return;}
-   if(!await window.planImageStore.trash(item))return;if(item.isSeed)library().hidden=[...new Set([...(library().hidden||[]),item.id])];else library().items=library().items.filter(x=>x.id!==item.id);await galleryCommit();plan45RenderGallery()
-  }catch(e){alert('삭제를 완료하지 못했습니다: '+e.message)}};image.append(del);
+  const del=make('button','plan49-card-delete','숨김');del.title='그림삽입 목록에서만 숨김 · 원본 파일 및 계획도 배치 유지';del.type='button';del.onpointerdown=e=>e.stopPropagation();del.onkeydown=e=>e.stopPropagation();del.onclick=async e=>{e.preventDefault();e.stopPropagation();if(del.disabled)return;
+   if(!confirm('['+(item.description||'빈 그림칸')+']을 그림삽입 목록에서 숨길까요?\n원본 그림 파일과 계획도에 배치된 이미지는 그대로 유지됩니다.'))return;
+   const before=[...(library().hidden||[])];del.disabled=true;
+   try{library().hidden=[...new Set([...before,item.id])];await galleryCommit();plan45RenderGallery();toast('그림칸을 숨겼습니다. 원본 파일은 변경하지 않았습니다.')}
+   catch(e){library().hidden=before;del.disabled=false;alert('숨김 처리 실패: '+e.message)}
+  };image.append(del);
   const grip=make('button','plan65-gallery-move','⠿ 이동');let armed=false;grip.onpointerdown=()=>{armed=true};grip.onblur=()=>{armed=false};grip.onkeydown=e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const ids=plan45GalleryItems().map(x=>x.id),i=ids.indexOf(item.id),j=i+(e.key==='ArrowLeft'?-1:1);if(ids[j])plan65GalleryMove(item.id,ids[j],j>i)};
   card.draggable=true;card.ondragstart=e=>{if(!armed){e.preventDefault();return}e.dataTransfer.setData('application/x-plan-image',item.id)};card.ondragover=e=>{if(e.dataTransfer.types.includes('application/x-plan-image'))e.preventDefault()};card.ondrop=e=>{const moving=e.dataTransfer.getData('application/x-plan-image');if(moving){e.preventDefault();plan65GalleryMove(moving,item.id)}};card.append(grip,image,desc);grid.append(card)}results.append(grid)}
 window.plan50RefreshGallery=plan45RenderGallery;
@@ -8623,10 +8615,19 @@ html:not([data-plan83-setting-master="yes"]) .plan-setting-category.add,html:not
    id('plan70Backups').replaceChildren();
    const opt=document.createElement('option');opt.value=backupId;opt.textContent=backupId;
    id('plan70Backups').append(opt);
-   msg('서버 설정 백업을 검증하고 있습니다. 확인창에서 복원 여부를 선택하세요.');
+   msg('마스터 승인 완료 · 서버 설정 복원 중…\n백업 다운로드 및 무결성 검증 → 복원 여부 확인 → 설정 적용 순서로 진행됩니다.');
+   const progressNode=id('plan70Status');
+   const progressObserver=new MutationObserver(()=>{
+    const progress=(progressNode?.textContent||'').trim();
+    if(!progress)return;
+    if(/복원 완료/.test(progress))msg('서버 설정 복원 완료 · 기존 계획서와 그림 파일은 그대로 유지됩니다.');
+    else if(/취소|실패|오류/.test(progress))msg('서버 설정 복원 처리 결과: '+progress);
+    else msg('마스터 승인 완료 · 서버 설정 복원 중…\n'+progress);
+   });
+   if(progressNode)progressObserver.observe(progressNode,{characterData:true,childList:true,subtree:true});
    // Invoke the original, unchanged restore handler (including integrity checks and local safety backup).
    if(!restoreButton||typeof restoreButton.onclick!=='function')throw Error('기존 설정 복원 기능을 찾지 못했습니다.');
-   await restoreButton.onclick();
+   try{await restoreButton.onclick()}finally{progressObserver.disconnect()}
    const result=id('plan70Status').textContent||'';
    msg(/서버 설정 복원 완료/.test(result)?'설정 복원 완료 · 이번 승인 1회 사용됨':
        '설정 복원 실행 결과: '+result+'\n이번 승인 1회는 종료됩니다.');
