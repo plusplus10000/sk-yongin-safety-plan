@@ -5958,9 +5958,17 @@ function plan45RenderGallery(){libraryPanel.replaceChildren();const title=make('
  const choose=make('button','btn smallbtn','📁 그림칸 폴더 변경');choose.onclick=async()=>{try{if(await window.planImageStore.selectFolder())plan45RenderGallery()}catch(e){alert(e.message)}};
  const restore=make('button','btn smallbtn plan13-archived-toggle',galleryArchived?'삭제 항목 접기':'삭제 항목 보기');restore.id='plan13ArchivedBtn_images';restore.type='button';
  window.planImageStore.listTrash().then(items=>{if(restore.isConnected&&!galleryArchived)restore.textContent='삭제 항목 '+items.length+'개 보기'}).catch(()=>{});restore.setAttribute('aria-expanded',String(galleryArchived));restore.onclick=()=>{galleryArchived=!galleryArchived;plan45RenderGallery()};
+ const slot=make('button','btn smallbtn','＋ 그림칸');slot.type='button';slot.onclick=async()=>{
+  const item={id:'image_'+uid(),imageRef:'',description:''};
+  library().items.push(item);
+  try{await galleryCommit();galleryArchived=false;gallerySearch='';plan45RenderGallery();
+   const blank=libraryPanel.querySelector('[data-image-id="'+item.id+'"] .plan45-gallery-picture');
+   blank?.focus();toast('새 그림칸을 추가했습니다. 그림칸 안에서 Ctrl+V로 이미지를 붙여넣으세요.');
+  }catch(e){library().items=library().items.filter(x=>x.id!==item.id);alert('그림칸 추가 실패: '+e.message)}
+ };
  const add=make('button','btn smallbtn','＋ 이미지 등록'),input=make('input');input.type='file';input.accept='image/png,image/jpeg,image/webp';input.hidden=true;add.onclick=()=>input.click();input.onchange=async()=>{const file=input.files?.[0];if(!file)return;const id='image_'+uid();try{const imageRef=await window.planImageStore.add(file,id);library().items.push({id,imageRef,description:file.name});await galleryCommit();plan45RenderGallery()}catch(e){alert('이미지 등록 실패: '+e.message)}};
- title.append(add,restore,input);libraryPanel.append(title);libraryPanel.append(make('p','plan45-gallery-note','그림 클릭: 계획도에 배치 · 등록 그림 원본은 로컬 그림칸 폴더에 보관 · 계획서 JSON에는 좌표와 파일명만 저장'));
- const state=make('p','plan45-gallery-note','이미지 폴더: '+(window.planImageStore.name||'그림칸 · 기본: 안전-기초/그림칸'));const folderRow=make('div','plan45-gallery-folder');folderRow.append(state,choose);libraryPanel.append(folderRow);
+ title.append(slot,add,restore,choose,input);libraryPanel.append(title);libraryPanel.append(make('p','plan45-gallery-note','그림칸 클릭 후 Ctrl+V: 이미지 붙여넣기 · 등록 그림 클릭: 계획도에 배치 · 원본은 로컬 그림칸 폴더에 보관'));
+ const state=make('p','plan45-gallery-note','이미지 폴더: '+(window.planImageStore.name||'그림칸 · 기본: 안전-기초/그림칸'));const folderRow=make('div','plan45-gallery-folder');folderRow.append(state);libraryPanel.append(folderRow);
  const searchRow=make('div','plan-record-search plan45-gallery-search');const search=make('input');search.type='search';search.placeholder='그림 설명 · 파일명 검색';search.setAttribute('aria-label','그림 검색');search.value=gallerySearch;
  const searchButton=make('button','btn smallbtn','검색');searchButton.type='button';
  const applySearch=()=>{gallerySearch=search.value;plan45RenderGallery()};searchButton.onclick=applySearch;search.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();applySearch()}};search.onsearch=applySearch;searchRow.append(search,searchButton);libraryPanel.append(searchRow);
@@ -5968,10 +5976,31 @@ function plan45RenderGallery(){libraryPanel.replaceChildren();const title=make('
  if(galleryArchived){galleryRestore(results);return}
  const query=gallerySearch.trim().toLocaleLowerCase();
  const grid=make('div','plan45-gallery-grid');for(const item of plan45GalleryItems().filter(item=>((item.description||'')+' '+item.imageRef).toLocaleLowerCase().includes(query))){const card=make('article','plan45-gallery-card');card.dataset.imageId=item.id;
-  const image=make('div','plan45-gallery-picture');image.tabIndex=0;image.setAttribute('role','button');image.title='클릭하면 계획도에 배치';if(item.src){const img=make('img');img.src=item.src;img.alt=item.description||'그림';img.loading='lazy';image.append(img)}else image.append(make('span','','그림 파일 없음 · 폴더 연결 확인'));
-  image.onclick=()=>plan45AddImageToPlan(item);image.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();plan45AddImageToPlan(item)}};
+  const image=make('div','plan45-gallery-picture');image.tabIndex=0;image.setAttribute('role','button');image.title=item.imageRef?'클릭하면 계획도에 배치 · 이 그림칸에서 Ctrl+V로 교체 가능':'클릭 후 Ctrl+V로 이미지를 붙여넣기';if(item.src){const img=make('img');img.src=item.src;img.alt=item.description||'그림';img.loading='lazy';image.append(img)}else image.append(make('span','',item.imageRef?'그림 파일 없음 · 폴더 연결 확인':'빈 그림칸 · Ctrl+V 붙여넣기'));
+  image.onclick=()=>{image.focus();if(item.imageRef)plan45AddImageToPlan(item)};
+  image.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&item.imageRef){e.preventDefault();plan45AddImageToPlan(item)}};
+  image.addEventListener('paste',async e=>{
+   const file=[...(e.clipboardData?.items||[])].find(x=>/^image\/(?:png|jpeg|webp)$/i.test(x.type))?.getAsFile();
+   if(!file)return;
+   e.preventDefault();e.stopPropagation();
+   if(image.dataset.pasting==='1')return;
+   image.dataset.pasting='1';image.setAttribute('aria-busy','true');
+   try{
+    const rec=library().items.find(x=>x.id===item.id);
+    if(!rec){throw Error(item.isSeed?'기본 그림은 변경하지 않고 [+그림칸]을 만들어 붙여넣으세요.':'그림칸을 찾지 못했습니다.');}
+    const ref=await window.planImageStore.add(file,'paste_'+uid());
+    const before=rec.imageRef;rec.imageRef=ref;
+    try{await galleryCommit()}catch(err){rec.imageRef=before;throw err}
+    // The previous file is intentionally retained for existing plan references.
+    plan45RenderGallery();toast('그림칸 안에 이미지 붙여넣기 완료');
+   }catch(err){alert('그림칸 붙여넣기 실패: '+err.message)}
+   finally{image.dataset.pasting='';image.removeAttribute('aria-busy')}
+  });
   const desc=make('textarea','plan45-gallery-desc');desc.value=item.description||'';desc.rows=2;desc.placeholder='그림 설명';desc.onchange=async()=>{if(item.isSeed){library().notes[item.id]=desc.value}else{const rec=library().items.find(x=>x.id===item.id);if(rec)rec.description=desc.value}try{await galleryCommit()}catch(e){alert(e.message)}};
-  const del=make('button','plan49-card-delete','−');del.title='사용 계획서 안내 후 삭제목록 이동';del.onclick=async()=>{try{if(!await window.planImageStore.trash(item))return;if(item.isSeed)library().hidden=[...new Set([...(library().hidden||[]),item.id])];else library().items=library().items.filter(x=>x.id!==item.id);await galleryCommit();plan45RenderGallery()}catch(e){alert('삭제를 완료하지 못했습니다: '+e.message)}};image.append(del);
+  const del=make('button','plan49-card-delete','−');del.title='사용 계획서 안내 후 삭제목록 이동';del.onclick=async()=>{try{
+   if(!item.imageRef){if(!confirm('빈 그림칸을 삭제할까요? 다른 이미지와 계획서는 유지됩니다.'))return;library().items=library().items.filter(x=>x.id!==item.id);await galleryCommit();plan45RenderGallery();return;}
+   if(!await window.planImageStore.trash(item))return;if(item.isSeed)library().hidden=[...new Set([...(library().hidden||[]),item.id])];else library().items=library().items.filter(x=>x.id!==item.id);await galleryCommit();plan45RenderGallery()
+  }catch(e){alert('삭제를 완료하지 못했습니다: '+e.message)}};image.append(del);
   const grip=make('button','plan65-gallery-move','⠿ 이동');let armed=false;grip.onpointerdown=()=>{armed=true};grip.onblur=()=>{armed=false};grip.onkeydown=e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();const ids=plan45GalleryItems().map(x=>x.id),i=ids.indexOf(item.id),j=i+(e.key==='ArrowLeft'?-1:1);if(ids[j])plan65GalleryMove(item.id,ids[j],j>i)};
   card.draggable=true;card.ondragstart=e=>{if(!armed){e.preventDefault();return}e.dataTransfer.setData('application/x-plan-image',item.id)};card.ondragover=e=>{if(e.dataTransfer.types.includes('application/x-plan-image'))e.preventDefault()};card.ondrop=e=>{const moving=e.dataTransfer.getData('application/x-plan-image');if(moving){e.preventDefault();plan65GalleryMove(moving,item.id)}};card.append(grip,image,desc);grid.append(card)}results.append(grid)}
 window.plan50RefreshGallery=plan45RenderGallery;
@@ -7309,17 +7338,25 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   document.head.append(script);
  })}
  const pause=ms=>new Promise(done=>setTimeout(done,ms));
- async function serverRequest(action,extra={}){
+ async function serverRequest(action,extra={},progress){
   const requestId=randomHex(32),payload={action,requestId,...extra};
-  let response;
-  try{response=await fetch(ENDPOINT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),cache:'no-store'})}
-  catch(e){throw Error('서버 요청을 보내지 못했습니다. 인터넷 연결과 배포 권한을 확인하세요.')}
-  const started=Date.now();
-  while(Date.now()-started<155000){
+  const notify=message=>{if(typeof progress==='function')progress(message)};
+  notify('서버에 요청 전달 중…');
+  // Requests are idempotency-keyed with requestId. Do not blindly resend registration codes.
+  try{
+   await Promise.race([
+    fetch(ENDPOINT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),cache:'no-store'}),
+    new Promise((_,reject)=>setTimeout(()=>reject(Error('서버 요청 연결 시간 초과')),22000))
+   ]);
+  }catch(e){throw Error('서버로 요청을 전송했는지 확인할 수 없습니다: '+(e?.message||'연결 실패')+' · 등록기기 목록을 먼저 확인해 주세요.');}
+  const started=Date.now(),limit=action==='registerDevice'?65000:155000;
+  while(Date.now()-started<limit){
+   notify('서버 응답 확인 중… '+Math.floor((Date.now()-started)/1000)+'초 경과');
    const result=await jsonpStatus(requestId);
    if(!result.pending){if(!result.ok)throw Error(String(result.error||'서버 작업 거부'));return result}
    await pause(1600);
   }
+  if(action==='registerDevice')throw Error('등록 요청의 결과를 확인하지 못했습니다. 같은 등록코드로 재시도하기 전에 마스터의 등록기기 목록에서 등록 여부를 확인해 주세요. Apps Script 웹앱 배포 상태도 확인해야 합니다.');
   throw Error('응답 확인 기한이 지났습니다. 동일 백업을 반복 저장하지 말고 서버 백업 목록을 먼저 확인하세요.');
  }
  function authorized(action,more={}){const c=credentials();if(!c)throw Error('먼저 등록코드를 입력하여 기기를 등록하세요.');return serverRequest(action,{deviceId:c.deviceId,deviceToken:c.deviceToken,...more})}
@@ -7333,21 +7370,43 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   try{await callback()}catch(e){console.error('서버 백업 작업 오류',e);status('실패: '+e.message);alert('서버 백업 오류: '+e.message)}finally{busy=false;panel.querySelectorAll('button').forEach(b=>b.disabled=false);if(confirmedRole==='viewer'){$70('plan70Backup').disabled=true;$70('plan76RestoreSettings').disabled=true}}
  }
  const c=credentials();status(c?'기기 인증 확인 중…':'기기 미등록 · 마스터에게 16자리 등록코드를 요청하세요.');if(c)checkAccess();
+ let registerBusy=false;
+ window.plan70RegisterDevice=async function(name,code,progress){
+  if(registerBusy)throw Error('기기 등록 요청이 진행 중입니다. 결과를 확인한 후 다시 시도하세요.');
+  registerBusy=true;
+  const notify=message=>{status(message);if(typeof progress==='function')progress(message)};
+  try{
+   if(!planFolderHandle)throw Error('먼저 저장 폴더를 선택하세요.');
+   const clean=String(code||'').replace(/\s/g,'').toUpperCase();
+   if(!/^[A-F0-9]{16}$/.test(clean))throw Error('마스터가 발급한 16자리 등록코드를 입력하세요.');
+   const label=String(name||'').trim()||('브라우저 / '+new Date().toLocaleDateString('ko-KR'));
+   const id='d_'+randomHex(12);
+   const result=await serverRequest('registerDevice',{deviceId:id,deviceLabel:label,registrationCode:clean},notify);
+   if(!result?.deviceId||!result?.deviceToken)throw Error('서버 응답에 새 기기 인증정보가 없습니다. 관리자에게 문의하세요.');
+   const record={deviceId:result.deviceId,deviceToken:result.deviceToken,userId:result.userId,userName:result.userName,deviceLabel:label};
+   // Do not touch the old registration token until the server confirms success.
+   try{localStorage.setItem(DEVICE_KEY,JSON.stringify(record))}catch(e){throw Error('서버 기기등록은 승인됐으나 브라우저 인증정보 저장에 실패했습니다. 브라우저 저장 설정을 확인하세요.')}
+   notify('서버 기기 등록 승인 · 폴더 연결 및 권한 확인 중…');
+   try{
+    await window.plan75BindFirstFolder();
+    await window.planImageStore.bind();
+    if(typeof window.plan73AuthorizeNewDevice==='function')await window.plan73AuthorizeNewDevice();
+    if(typeof window.plan72FinalizeRegistration==='function')await window.plan72FinalizeRegistration();
+   }catch(e){
+    // Registration has already succeeded. Do not delete its token or overwrite user files.
+    notify('서버 등록 완료 · 폴더/권한 확인 필요: '+e.message);
+    window.plan72RegisteredButSeedFailed?.(e.message);
+    throw Error('기기 등록은 완료됐지만 로컬 폴더 연결을 확인해야 합니다: '+e.message);
+   }
+   $70('plan70Code').value='';
+   markRole(result.role);
+   notify('기기 등록 완료 · '+(result.userName||label)+' · '+roleName(result.role));
+   return result;
+  }finally{registerBusy=false;}
+ };
  $70('plan70Register').onclick=()=>run('등록코드 확인 중…',async()=>{
-  if(credentials()&&!confirm('이 HTML에 이미 등록된 기기가 있습니다. 새 기기로 다시 등록할까요? 기존 등록정보를 바꾸려는 경우에만 확인하세요.'))return;
-  if(!planFolderHandle)throw Error('먼저 [저장 폴더 지정]을 눌러 PC 저장 폴더를 선택하세요.');
-  const code=$70('plan70Code').value.replace(/\s/g,'').toUpperCase();if(!/^[A-F0-9]{16}$/.test(code))throw Error('Apps Script에서 발급한 16자리 등록코드를 입력하세요.');
-  const id='d_'+randomHex(12),label=$70('plan70Label').value.trim()||('브라우저 / '+new Date().toLocaleDateString('ko-KR'));
-  const result=await serverRequest('registerDevice',{deviceId:id,deviceLabel:label,registrationCode:code});
-  const record={deviceId:result.deviceId,deviceToken:result.deviceToken,userId:result.userId,userName:result.userName};
-  try{localStorage.setItem(DEVICE_KEY,JSON.stringify(record))}catch(e){throw Error('기기 등록 성공 후 브라우저에 저장하지 못했습니다. 새 등록코드를 발급받아야 할 수 있습니다.')}
-  await window.plan75BindFirstFolder();await window.planImageStore.bind();
-  // The legacy server-backup-only role is not sufficient: unlock the application first.
-  if(typeof window.plan73AuthorizeNewDevice==='function')await window.plan73AuthorizeNewDevice();
-  $70('plan70Code').value='';markRole(result.role);status('기기 등록 완료 · '+result.userName+' · '+roleName(result.role)+'\n등록 토큰만 현재 브라우저에 보관합니다.');
-  if(typeof window.plan72FinalizeRegistration==='function'){
-   try{await window.plan72FinalizeRegistration()}catch(seedError){console.error('기기 등록 후 폴더 초기화 실패',seedError);status('기기 등록 완료 · 샘플 준비 실패: '+seedError.message+'\n저장 폴더의 기존 파일은 삭제하지 않았습니다. 설정에서 폴더를 확인해 주세요.');window.plan72RegisteredButSeedFailed?.(seedError.message)}
-  }
+  if(credentials()&&!window.plan73IsRegistering?.()&&!confirm('이 기기에는 기존 등록정보가 있습니다. 새 코드로 교체 등록하시겠습니까? 기존 저장 자료는 보존됩니다.'))return;
+  await window.plan70RegisterDevice($70('plan70Label').value,$70('plan70Code').value);
  });
  $70('plan70Check').onclick=()=>run('기기 권한 확인 중…',async()=>{await checkAccess()});
  async function deviceList(){const r=await authorized('adminListDevices');const wrap=$70('plan71DeviceList');wrap.replaceChildren();
@@ -7482,7 +7541,7 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
  <div id="plan72FolderStatus" role="status">저장 폴더를 아직 선택하지 않았습니다.</div>
  <label>이미지 저장 폴더 (기본: 안전-기초/그림칸)</label><button id="plan72ImagePick" type="button">🖼 그림칸 폴더 지정</button><div id="plan72ImageStatus" role="status">기본: 안전-기초/그림칸</div>
  <p>저장 폴더는 나중에 <b>설정 → 데이터 저장 폴더 관리</b>에서 변경할 수 있습니다. 기존 폴더 자료는 자동으로 삭제하거나 덮어쓰지 않습니다.</p>
- <button class="primary" id="plan72Submit" type="button">기기 등록</button><div id="plan72Msg" aria-live="polite"></div>
+ <button class="primary" id="plan72Submit" type="button">기기 등록</button><button id="plan72Cancel" type="button" hidden>기존 기기 권한 화면으로</button><div id="plan72Msg" aria-live="polite"></div>
  </div>`;
  document.body.append(g);
  const CRED_KEY='safeplan_server_device_v1', PATH_KEY='safeplan_folder_display_path_v1';
@@ -7492,17 +7551,33 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
  function imageFolderText(){window.planImageStore.notifyFolder();}
  $72('plan72ImagePick').onclick=async()=>{try{await window.planImageStore.selectFolder();imageFolderText()}catch(e){$72('plan72Msg').textContent=e.message}};
  function setGate(isOpen){g.hidden=!isOpen;if(isOpen){setFolderText();$72('plan72Name').focus();}}
+ window.plan72ShowRegistration=()=>{setGate(true);$72('plan72Msg').textContent='';$72('plan72Cancel').hidden=!cred();};
+ $72('plan72Cancel').onclick=()=>{if($72('plan72Submit').disabled)return;setGate(false);window.plan73CancelRegistration?.();};
  $72('plan72Pick').onclick=async()=>{
   $72('plan72Msg').textContent='';
-  try{await choosePlanFolder();setFolderText()}catch(e){$72('plan72Msg').textContent=e.message}
+  try{if(window.plan73IsRegistering?.())await window.plan73ChooseRegistrationFolder();else await choosePlanFolder();setFolderText()}catch(e){$72('plan72Msg').textContent=e.message}
  };
+ let submitting=false;
  $72('plan72Submit').onclick=async()=>{
-  if(!planFolderHandle){$72('plan72Msg').textContent='먼저 저장 폴더를 선택해 주세요.';return}
-  if(!window.planImageStore.folder){try{await window.planImageStore.useDefault(true)}catch(e){$72('plan72Msg').textContent=e.message;return}}
-  const name=$72('plan72Name').value.trim(),code=$72('plan72Code').value.trim();
-  if(!name||!/^[A-F0-9]{16}$/i.test(code)){$72('plan72Msg').textContent='기기 이름과 16자리 등록코드를 입력해 주세요.';return}
-  const realName=$72('plan70Label'),realCode=$72('plan70Code'),btn=$72('plan70Register');
-  realName.value=name;realCode.value=code;btn.click();$72('plan72Msg').textContent='서버 기기등록 요청 중…';
+  if(submitting)return;
+  const msg=$72('plan72Msg');msg.textContent='';
+  if(!planFolderHandle){msg.textContent='먼저 저장 폴더를 선택해 주세요.';return}
+  const name=$72('plan72Name').value.trim(),code=$72('plan72Code').value.replace(/\s/g,'').toUpperCase();
+  if(!name||!/^[A-F0-9]{16}$/.test(code)){msg.textContent='기기 이름과 16자리 등록코드를 입력해 주세요.';return}
+  submitting=true;
+  $72('plan72Submit').disabled=true;$72('plan72Cancel').disabled=true;
+  const originalText=$72('plan72Submit').textContent;
+  $72('plan72Submit').textContent='기기 등록 확인 중…';
+  try{
+   if(!window.planImageStore.folder)await window.planImageStore.useDefault(true);
+   const realName=$72('plan70Label'),realCode=$72('plan70Code');realName.value=name;realCode.value=code;
+   await window.plan70RegisterDevice(name,code,message=>{msg.textContent=message});
+   msg.textContent='기기 등록 및 권한 확인 완료';
+   $72('plan72Code').value='';
+  }catch(e){
+   msg.textContent='등록 확인 실패: '+String(e?.message||e)+'\n새 코드 발급 전에 마스터의 등록기기 목록을 확인하세요.';
+   console.error('신규 기기등록 오류',e);
+  }finally{submitting=false;$72('plan72Submit').disabled=false;$72('plan72Cancel').disabled=false;$72('plan72Submit').textContent=originalText}
  };
  async function exists(name){try{await planFolderHandle.getFileHandle(name);return true}catch(e){if(e.name==='NotFoundError')return false;throw e}}
  const NAMES=['안전작업계획서_기준설정.json','20261023-1.json'];
@@ -7936,17 +8011,42 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
 (()=>{
  const ROOT=document.documentElement, CREDENTIAL='safeplan_server_device_v1';
  const gate=document.createElement('section');gate.id='plan73AccessGate';gate.setAttribute('role','alertdialog');gate.setAttribute('aria-modal','true');
- gate.innerHTML='<div class="plan73-box"><h2>🔒 안전 작업계획서 · 기기 권한 확인</h2><p id="plan73AccessMessage">등록기기 사용 권한을 확인하고 있습니다.</p><button id="plan73Retry" type="button">권한 다시 확인</button></div>';
+ gate.innerHTML='<div class="plan73-box"><h2>🔒 안전 작업계획서 · 기기 권한 확인</h2><p id="plan73AccessMessage">등록기기 사용 권한을 확인하고 있습니다.</p><button id="plan73Retry" type="button">권한 다시 확인</button> <button id="plan73NewDevice" type="button">신규 기기 등록</button></div>';
  document.body.append(gate);
  const message=document.getElementById('plan73AccessMessage');
  const $=id=>document.getElementById(id);
  let state='checking',role='',booted=false,booting=null,pending=null,folderError='',folderNeedsAttention=false;
+ let registering=false,registrationFolderBefore=null,registrationRevision=0;
+ window.plan73IsRegistering=()=>registering;
+ window.plan73BeginRegistration=()=>{
+  if(registering)return;
+  registrationFolderBefore=planFolderHandle;registering=true;registrationRevision++;
+  gate.hidden=true;
+  window.plan72ShowRegistration?.();
+ };
+ window.plan73CancelRegistration=()=>{
+  if(!registering)return;
+  registering=false;registrationRevision++;
+  planFolderHandle=registrationFolderBefore;registrationFolderBefore=null;
+  gate.hidden=false;message.textContent='기존 기기 권한을 다시 확인하고 있습니다.';
+  requestFresh();
+ };
+ window.plan73ChooseRegistrationFolder=async()=>{
+  if(!window.showDirectoryPicker)throw Error('PC의 Chrome 또는 Edge에서 폴더를 지정할 수 있습니다.');
+  let next;try{next=await window.showDirectoryPicker({id:'safety-work-plan',mode:'readwrite'})}catch(e){if(e.name==='AbortError')return false;throw e}
+  let p=await next.queryPermission({mode:'readwrite'});
+  if(p!=='granted')p=await next.requestPermission({mode:'readwrite'});
+  if(p!=='granted')throw Error('저장 폴더 접근 권한을 허용해 주세요.');
+  // Selecting a folder for registration must not load or overwrite any documents.
+  planFolderHandle=next;return true;
+ };
  const credentials=()=>{try{const c=JSON.parse(localStorage.getItem(CREDENTIAL)||'null');return c?.deviceId&&c?.deviceToken?c:null}catch(_){return null}};
  const permitted=()=>state==='active'||state==='readonly';
  const writeAllowed=()=>state==='active';
  window.plan73CanRead=permitted;
  window.plan73CanWrite=writeAllowed;
  function paint(next,detail){
+  if(registering)return; // pending checks for the former token cannot replace the registration form.
   state=next;
   const allowed=permitted();
   ROOT.classList.toggle('safeplan-access-locked',!allowed);
@@ -7954,6 +8054,7 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   gate.hidden=allowed||state==='unregistered';
   const re=($('plan73Retry'));
   re.hidden=state==='unregistered';
+  $('plan73NewDevice').hidden=state==='checking'||state==='unregistered';
   message.textContent=detail||({checking:'서버에서 등록기기 권한을 확인하고 있습니다.',unregistered:'등록코드를 발급받아 먼저 기기를 등록하세요.',suspended:'마스터가 이 기기의 사용을 중지했습니다. 계획서 화면 및 폴더 불러오기와 저장을 사용할 수 없습니다.',disconnected:'서버에서 기기 사용권한을 확인하지 못했습니다. 보안을 위해 안전 작업계획서를 잠갔습니다. 인터넷 연결을 확인한 뒤 다시 시도하세요.'}[next]||'');
   if(!allowed){
    const onboard=$('plan72Gate');if(onboard&&next!=='unregistered')onboard.hidden=true;
@@ -7968,6 +8069,8 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   return booting;
  }
  async function requestFresh(options={}){
+  if(registering&&!options.newRegistration)return false;
+  const version=registrationRevision;
   const c=credentials();
   if(!c){role='';paint('unregistered');if($('plan72Gate'))$('plan72Gate').hidden=false;return false;}
   if(pending){const ok=await pending;return !!ok&&(!options.write||role!=='viewer');}
@@ -7982,12 +8085,14 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
     ]);
     if(!r?.ok||!['master','editor','viewer'].includes(r.role))throw Error('유효한 기기 권한을 확인하지 못했습니다.');
    }catch(e){
+    if(version!==registrationRevision)return false;
     role='';folderError='';
     const reason=String(e?.message||e||'권한 확인 실패');
     if(/사용.?중지|중지된|폐기|revok/i.test(reason))paint('suspended');
     else paint('disconnected','서버 권한 확인 실패: '+reason+'\n인터넷 연결 후 [권한 다시 확인]을 눌러 주세요.');
     return false;
    }
+   if(version!==registrationRevision)return false;
    role=r.role;
    if(options.write&&role==='viewer'){paint('readonly','이 기기는 조회 전용으로 승인되었습니다. 수정·신규·저장 기능은 허용되지 않습니다.');return false;}
    // Master/editor/viewer approval opens the app regardless of local folder status.
@@ -8009,9 +8114,16 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   })();
   try{return await pending}finally{pending=null}
  }
- window.plan73AuthorizeNewDevice=async()=>{if(!await requestFresh())throw Error('기기 등록 이후 서버의 사용 승인을 확인하지 못했습니다.');};
+ window.plan73AuthorizeNewDevice=async()=>{
+  registering=false;registrationRevision++;
+  // Do not reuse an authorization request for the old, stopped device.
+  if(pending){try{await pending}catch(_){}}
+  if(!await requestFresh({newRegistration:true}))throw Error('기기 등록 이후 서버 사용 승인을 확인하지 못했습니다.');
+  registrationFolderBefore=null;
+ };
  window.plan73RequireEdit=async()=>{if(!await requestFresh({write:true})){if(state==='readonly')alert('이 기기는 조회 전용입니다.');return false;}return true;};
  $('plan73Retry').onclick=()=>requestFresh();
+ $('plan73NewDevice').onclick=()=>window.plan73BeginRegistration();
  // The normal Settings folder buttons are the only recovery controls.
  window.plan73RetryFolderLoad=async()=>{
   if(!permitted())return false;
@@ -8205,4 +8317,23 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
 #plan76LocalSettings button{cursor:pointer}
 @media print{#plan76LocalSettings{display:none!important}}
 </style>
+
+<style id="plan78-registration-gallery-controls">
+#plan73AccessGate #plan73NewDevice{background:#fff;color:#0c70dd}
+#plan72Submit:disabled{opacity:.65;cursor:wait}
+#plan72Cancel{width:100%;margin-top:5px}
+#plan45Gallery .section-title{align-items:center;gap:5px}
+#plan45Gallery .section-title>.btn{flex:0 0 auto}
+#plan45Gallery .plan45-gallery-picture:focus{outline:2px solid #0878f9;outline-offset:1px}
+#plan45Gallery .plan45-gallery-picture[aria-busy="true"]{opacity:.65;cursor:progress}
+@media(max-width:490px){#plan45Gallery .section-title{flex-wrap:wrap}}
+</style>
+<script id="plan78-diagram-clipboard-limiter">
+// Prevent pasted image files from being inserted into the actual drawing sheet.
+// Only focused image tiles in the 그림삽입 gallery accept pasted images.
+document.addEventListener('paste',event=>{
+ if(!event.target?.closest?.('#sheetPreview2,#plan28PhotoTools'))return;
+ if([...(event.clipboardData?.items||[])].some(x=>x.type.startsWith('image/'))){event.preventDefault();event.stopImmediatePropagation();}
+},true);
+</script>
 </body></html>
