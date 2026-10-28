@@ -1062,7 +1062,7 @@ async function plan66InitializeStorage(){
  }
 }
 
-function toast(s){const el=$('toast');el.textContent=s;el.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>el.classList.remove('show'),2700)}
+function toast(s){const el=$('toast');el.textContent=s;el.classList.toggle('plan80-big-save',/저장 (?:완료|실패)|저장 중|저장됨|저장 완료|저장에 실패|계획서 저장/.test(s));el.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>el.classList.remove('show'),2700)}
 function setDraft(k,value){data[k]=value;dirty()}
 function dirty(){syncPreview();persist();$('saveStatus').textContent=data.id?'수정 내용 임시 보존':'새 문서 · 임시 보존';$('statusChip').textContent='작성 중';updateSummary()}
 function nextPeriod(iso){if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||''))return ['',''];const [y,m]=iso.split('-').map(Number);let first=new Date(y,m,1),last=new Date(y,m+1,0);const fm=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;return [fm(first),fm(last)]}
@@ -3673,6 +3673,27 @@ remove.onclick=async()=>{const rec=chosenPhoto();if(!rec||photoLocked(rec))retur
 #planInputPanel #planDataTabs .plan-data-tab.active{background:#f28c18!important;color:#fff!important;border-color:#dc7704!important;box-shadow:inset 0 3px #b65e00!important}
 #planInputPanel #planDataTabs .plan-data-tab:focus-visible{outline:2px solid #164b89;outline-offset:1px}
 #planInputPanel #planDataTabs{gap:3px!important}
+/* Save notifications: central, approximately triple the old 12px type size. */
+#toast.plan80-big-save{position:fixed!important;top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;min-width:min(320px,86vw)!important;max-width:92vw!important;padding:25px 34px!important;text-align:center!important;font-size:clamp(23px,3vw,36px)!important;line-height:1.3!important;border-radius:13px!important;z-index:2147483100!important;white-space:normal!important}
+@media(max-width:600px){#toast.plan80-big-save{font-size:23px!important;padding:22px 24px!important}}
+/* Make in-progress save feedback much more readable without changing work semantics. */
+#planSafeBusyOverlay:has(#planSafeBusyMessage) #planSafeBusyPanel{max-width:min(690px,94vw)}
+#planSafeBusyOverlay #planSafeBusyPanel strong{font-size:clamp(24px,3.5vw,42px)}
+#plan80DeletedPlans{white-space:nowrap}
+.plan80-deleted-dialog{width:min(660px,94vw);max-height:80vh;border:1px solid #b7cfe9;border-radius:10px;padding:20px;box-shadow:0 18px 55px #0b23404f;color:#1a3f65}
+.plan80-deleted-dialog::backdrop{background:rgba(20,38,60,.42)}
+.plan80-deleted-header,.plan80-deleted-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.plan80-deleted-header h3{margin:0;font-size:18px}
+.plan80-deleted-note{font-size:12px;line-height:1.6;color:#456588}
+.plan80-deleted-row{padding:10px 4px;border-top:1px solid #dde8f4;font-size:13px}
+.plan80-deleted-row small{display:block;color:#64809d;margin-top:3px}
+
+/* Direct tabs show their registered lists immediately, not the settings/backup controls. */
+#planInputPanel #planDataPane_settings.plan80-direct-list>:not(#plan29SettingsTree){display:none!important}
+#planInputPanel #planDataPane_settings.plan80-direct-list #plan29SettingsTree>.plan29-settings-branch{display:none!important}
+#planInputPanel #planDataPane_settings.plan80-direct-list #plan29SettingsTree>.plan29-settings-branch[open]{display:block!important}
+#planInputPanel #planDataPane_settings.plan80-direct-list #plan29SettingsTree{margin-top:0!important}
+
 #planInputPanel .plan30-checkhead{display:flex;flex-direction:column;align-items:center;gap:3px;white-space:normal}
 #planInputPanel .plan30-checkactions{display:flex;gap:2px;align-items:center;justify-content:center}
 #planInputPanel .plan30-checkactions button{font-size:9px!important;line-height:1.2!important;padding:2px 3px!important;border:1px solid #91bee9;border-radius:3px;background:#fff;color:#086cc9;cursor:pointer;white-space:nowrap}
@@ -3713,15 +3734,19 @@ remove.onclick=async()=>{const rec=chosenPhoto();if(!rec||photoLocked(rec))retur
     await previousSwitch(target);
     // If underlying screen navigation refused to save, don't display a false tab state.
     if(currentInputTab!==target)return;
-    if(['persons','equipment','cargo'].includes(name)){
-      for(const branch of document.querySelectorAll('#plan29SettingsTree > details')){
-        branch.open=branch.dataset.settingsBranch===name;
-      }
-      const pane=$('planDataContent');if(pane)pane.scrollTop=0;
+    const settingsPane=$('planDataPane_settings');
+    const direct=['persons','equipment'].includes(name);
+    if(settingsPane){
+      settingsPane.classList.toggle('plan80-direct-list',direct);
+      settingsPane.dataset.directList=direct?name:'';
+    }
+    const branches=[...document.querySelectorAll('#plan29SettingsTree > details')];
+    if(direct){
+      for(const branch of branches)branch.open=branch.dataset.settingsBranch===name;
     }else if(name==='settings'){
-      const branches=[...document.querySelectorAll('#plan29SettingsTree > details')];
       if(!branches.some(x=>x.open)&&branches.length)branches[0].open=true;
     }
+    const pane=$('planDataContent');if(pane)pane.scrollTop=0;
     highlightTab(name);
   };
   highlightTab(currentInputTab==='settings'?'settings':currentInputTab);
@@ -5633,8 +5658,63 @@ if(searchPane){
   const dateWrap=make('div','plan48-dates');dateWrap.append(from,make('span','','~'),to);
   const refresh=make('button','btn','새로고침');refresh.type='button';refresh.id='plan48Refresh';
   const apply=make('button','btn primary','검색');apply.type='button';apply.id='plan45Apply';
-  row2.append(field('검색어',keyword),field('기간',dateWrap),refresh,apply);
+  const deleted=make('button','btn','삭제된 계획서');deleted.type='button';deleted.id='plan80DeletedPlans';deleted.title='삭제된 문서번호 목록 확인 및 원본 파일 복원';
+  row2.append(field('검색어',keyword),field('기간',dateWrap),refresh,apply,deleted);
   ctrl.append(row1,row2);
+  // Deleted JSON documents are retained on disk. Never silently remove the marker or overwrite the original file.
+  deleted.onclick=async()=>{
+    const marks=store.planDeletedDocuments||{};
+    const ids=Object.keys(marks).sort((a,b)=>b.localeCompare(a));
+    const dialog=document.createElement('dialog');dialog.className='plan80-deleted-dialog';
+    dialog.setAttribute('aria-label','삭제된 계획서 목록');
+    const header=make('div','plan80-deleted-header');
+    const title=make('h3','',`삭제된 계획서 (${ids.length}건)`);
+    const close=make('button','btn','닫기');close.type='button';close.onclick=()=>dialog.close();
+    header.append(title,close);dialog.append(header);
+    dialog.append(make('p','plan80-deleted-note','삭제 기록만 표시합니다. 복원은 지정된 계획서 폴더에 문서번호 JSON 원본이 남아 있을 때만 가능합니다. 기존 설정·다른 계획서는 변경하지 않습니다.'));
+    const listing=make('div','plan80-deleted-list');dialog.append(listing);
+    const restore=async(id,btn)=>{
+      if(!planFolderHandle||!await planFolderPermission(true))return alert('기존 지정 폴더를 다시 연결하고 접근 권한을 허용해 주세요.');
+      if(!window.plan73CanWrite?.())return alert('이 기기의 저장 권한을 확인할 수 없습니다.');
+      if(store.documents?.[id])return alert('같은 문서번호가 현재 목록에 이미 있습니다.');
+      let file,settingFile,previousSettings,doc,payload;
+      try{
+        file=await planFolderHandle.getFileHandle(id+'.json');
+        payload=JSON.parse(await(await file.getFile()).text());
+        doc=payload.document;
+        if(payload.project!=='안전-작업계획서'||payload.id!==id||!doc||doc.id!==id)throw Error('개별 계획서 원본 형식이 올바르지 않습니다.');
+        settingFile=await planFolderHandle.getFileHandle('안전작업계획서_기준설정.json');
+        previousSettings=await(await settingFile.getFile()).text();
+        const current=JSON.parse(previousSettings);
+        if(current.project!=='안전-작업계획서'||current.kind!=='reference-settings')throw Error('현재 공통 설정 파일 형식이 올바르지 않습니다.');
+        if(!confirm(id+' 계획서를 삭제목록에서 복원할까요?\n기존 원본 JSON은 그대로 유지하며 삭제 표시만 해제합니다.'))return;
+        const altered=structuredClone(current);altered.ui||=( {});altered.ui.deleted||=( {});delete altered.ui.deleted[id];
+        const hydrated=await window.planImageStore.hydrateDoc(structuredClone(doc));
+        btn.disabled=true;
+        const writer=await settingFile.createWritable();
+        try{await writer.write(JSON.stringify(altered,null,2));await writer.close()}catch(e){try{await writer.abort()}catch(_){}throw e}
+        const saved=JSON.parse(await(await settingFile.getFile()).text());
+        if(saved.ui?.deleted?.[id]!==undefined)throw Error('복원 상태 저장 확인 실패');
+        delete store.planDeletedDocuments[id];
+        store.documents||=( {});
+        store.documents[id]=hydrated;
+        persist();plan18RenderAllDocuments();
+        toast(id+' 계획서 복원 완료');
+        dialog.close();
+      }catch(e){console.error('계획서 복원 실패:',e);alert('복원할 수 없습니다: '+e.message+'\n문서번호 JSON과 기준설정 파일을 임의로 삭제하지 마세요.')}
+      finally{btn.disabled=false}
+    };
+    if(!ids.length)listing.append(make('p','plan18-empty','삭제된 계획서가 없습니다.'));
+    for(const id of ids){
+      const line=make('div','plan80-deleted-row');
+      const label=make('div','');label.append(make('strong','',id),make('small','',String(typeof marks[id]==='string'?marks[id]:marks[id]?.deletedAt||'')));
+      const act=make('button','btn','복원');act.type='button';act.onclick=()=>restore(id,act);
+      line.append(label,act);listing.append(line);
+    }
+    dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
+    dialog.addEventListener('close',()=>dialog.remove());
+    document.body.append(dialog);dialog.showModal();
+  };
   const header=searchPane.querySelector('.plan18-list-head');if(header)header.style.display='none';
   const meta=searchPane.querySelector(':scope > .plan18-meta');if(meta)meta.style.display='none';
   searchPane.prepend(ctrl);syncSelects();
