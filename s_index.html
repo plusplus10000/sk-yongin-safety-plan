@@ -458,7 +458,7 @@ body.plan-dragging{cursor:col-resize!important;user-select:none!important}
  #planInputPanel #plan13MasterList{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 }
 
-#plan13ArchivedBtn_person,#plan13ArchivedBtn_cargo,#plan13ArchivedBtn_equipment{font-size:10px!important;color:#705a36!important;border:1px solid #d9bf91!important;background:#fff9ef!important;padding:3px 5px!important}
+#plan13ArchivedBtn_person,#plan13ArchivedBtn_cargo,#plan13ArchivedBtn_equipment,#plan13ArchivedBtn_images{font-size:10px!important;color:#705a36!important;border:1px solid #d9bf91!important;background:#fff9ef!important;padding:3px 5px!important}
 #plan13ArchivedBtn_person[hidden],#plan13ArchivedBtn_cargo[hidden],#plan13ArchivedBtn_equipment[hidden]{display:none!important}
 </style>
 <style id="plan16-change-styles">
@@ -720,9 +720,19 @@ body.plan-dragging{cursor:col-resize!important;user-select:none!important}
 #plan71Master button,#plan71Master select{font-size:11px;border-radius:4px;border:1px solid #a7c6e8;background:#fff;color:#125c9f;padding:5px 7px;cursor:pointer}
 #plan71Master label{font-size:11px;font-weight:700}
 #plan71Master .plan71-code{font-size:12px;color:#185e94;white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0}
-#plan71Master .plan71-list{overflow-x:auto}
-#plan71Master table{min-width:420px;width:100%;font-size:11px}
+#plan71Master .plan71-list{overflow-x:auto;container-type:inline-size}
+#plan71Master table{width:100%;font-size:11px}
 #plan71Master th,#plan71Master td{white-space:nowrap;padding:5px 4px}
+#plan71DeviceList th:last-child,#plan71DeviceList td:last-child{width:1%;white-space:nowrap}
+#plan71DeviceList .plan71-device-actions{display:flex;align-items:center;justify-content:center;gap:4px}
+#plan71DeviceList .plan71-device-actions select{width:auto;max-width:100%;flex:0 0 auto}
+#plan71DeviceList .plan71-device-actions button{flex:0 0 auto;white-space:nowrap}
+@container(max-width:600px){
+ #plan71DeviceList .plan71-device-actions{flex-direction:column;align-items:stretch}
+ #plan71DeviceList th,#plan71DeviceList td{padding:5px 3px;white-space:normal;overflow-wrap:anywhere}
+ #plan71DeviceList th:nth-child(4),#plan71DeviceList td:nth-child(4){white-space:nowrap}
+ #plan71DeviceList .plan71-device-actions select{width:auto;min-width:0}
+}
 #plan71Master .plan71-disabled{color:#a33439}
 </style>
 <style>#plan28PhotoTools label[for="plan28PhotoFile"],#plan28PhotoFile{display:none!important}#plan72ImageStatus{color:#28537c;background:#f0f6fd;padding:9px;border-radius:6px;font-size:12px;margin-bottom:7px}</style></head><body>
@@ -1866,18 +1876,35 @@ function plan13Setup(){
 function plan13RecordSource(kind){return kind==='person'?masters.persons:kind==='equipment'?masters.equipment:masters.cargo}
 function plan13RecordSelected(kind){return kind==='person'?data.persons:kind==='equipment'?data.equipment:data.cargo}
 const plan13ShowArchived={person:false,equipment:false,cargo:false};
-function plan13VisibleRecords(kind){const selected=plan13RecordSelected(kind)||[];return plan13RecordSource(kind).filter(x=>plan13ShowArchived[kind]?!!x.archived:(!x.archived||selected.includes(x.id)))}
+const plan13ListQuery={person:'',equipment:''};
+function plan13VisibleRecords(kind){
+ const selected=plan13RecordSelected(kind)||[],query=(plan13ListQuery[kind]||'').trim().toLocaleLowerCase();
+ const text=value=>Array.isArray(value)?value.map(text).join(' '):value&&typeof value==='object'?Object.entries(value).filter(([key])=>!['id','photo','src','archived'].includes(key)).map(([,v])=>text(v)).join(' '):String(value??'');
+ return plan13RecordSource(kind).filter(x=>(plan13ShowArchived[kind]?!!x.archived:(!x.archived||selected.includes(x.id)))&&(!query||text(x).toLocaleLowerCase().includes(query)));
+}
+function plan13MountListSearch(kind,heading){
+ if(!['person','equipment'].includes(kind)||document.getElementById('plan13Search_'+kind))return;
+ const row=document.createElement('div');row.className='plan-record-search';
+ const input=document.createElement('input');input.type='search';input.id='plan13Search_'+kind;input.value=plan13ListQuery[kind]||'';
+ input.placeholder=kind==='person'?'성명 · 소속 · 연락처 등 검색':'기종 · 모델명 · 성능 등 검색';input.setAttribute('aria-label',kind==='person'?'인력 검색':'장비 검색');
+ const button=document.createElement('button');button.type='button';button.className='btn smallbtn';button.textContent='검색';
+ const search=()=>{plan13ListQuery[kind]=input.value;kind==='person'?renderPersons():renderEquipments()};
+ button.onclick=search;input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();search()}};input.onsearch=search;
+ row.append(input,button);heading.after(row);
+}
+
 function plan13RefreshArchiveButtons(){
  for(const kind of ['person','cargo','equipment']){
   const btn=$('plan13ArchivedBtn_'+kind);if(!btn)continue;
   const n=plan13RecordSource(kind).filter(x=>x.archived).length;
+  if(plan13ListQuery[kind]&&!plan13VisibleRecords(kind).length){const empty=document.querySelector(kind==='person'?'#personRows .empty':'#equipmentRows .empty');if(empty)empty.textContent='검색 결과가 없습니다.'}
   btn.hidden=!n;btn.textContent=plan13ShowArchived[kind]?'삭제 항목 접기':'삭제 항목 '+n+'개 보기';
  }
 }
 function plan13ToggleArchiveList(kind){plan13ShowArchived[kind]=!plan13ShowArchived[kind];renderPersons();renderEquipments();plan13RenderCargo()}
 function plan13AddArchiveButton(kind,heading){if(!heading)return;
  const btn=document.createElement('button');btn.type='button';btn.className='btn smallbtn plan13-archived-toggle';btn.id='plan13ArchivedBtn_'+kind;btn.hidden=true;
- btn.onclick=()=>plan13ToggleArchiveList(kind);heading.appendChild(btn)
+ btn.onclick=()=>plan13ToggleArchiveList(kind);heading.appendChild(btn);plan13MountListSearch(kind,heading)
 }
 function plan13ManageButtons(kind,id,archived){
  const kindName=kind==='person'?'인력':kind==='equipment'?'장비':'중량물';
@@ -5632,7 +5659,7 @@ remove.onclick=async()=>{const rec=chosenPhoto();if(!rec||photoLocked(rec))retur
   for(const doc of Object.values(store.documents||{}))for(const p of doc?.plan28Photos||[])if(p.imageRef===ref)delete p.src;
   if(data?.plan28Photos){for(const p of data.plan28Photos)if(p.imageRef===ref)delete p.src;data.plan28Photos=data.plan28Photos.slice();syncPreview();}
   return true}
- async function listTrash(){return (await trashIndex()).list}
+ async function listTrash(){try{const dir=await(await open()).getDirectoryHandle('삭제목록');const file=await(await dir.getFileHandle('목록.json')).getFile();return JSON.parse(await file.text()).items||[]}catch(e){if(e.name==='NotFoundError')return [];throw e}}
  async function restore(ref){const f=await open(),{dir,list}=await trashIndex(),info=list.find(x=>x.imageRef===ref);if(!info)throw Error('삭제목록에 없는 이미지입니다.');const file=await(await dir.getFileHandle(ref)).getFile();try{await f.getFileHandle(ref);throw Error('그림칸에 같은 이름이 이미 있습니다.')}catch(e){if(e.name!=='NotFoundError')throw e}
   await write(ref,file);await saveTrashIndex(dir,list.filter(x=>x.imageRef!==ref));await dir.removeEntry(ref);
   for(const doc of Object.values(store.documents||{}))for(const p of doc.plan28Photos||[])if(p.imageRef===ref)p.src=peek(ref);
@@ -5657,11 +5684,10 @@ remove.onclick=async()=>{const rec=chosenPhoto();if(!rec||photoLocked(rec))retur
 #planInputPanel .plan45-table th{background:#eaf3fc;color:#215078;font-weight:800;position:sticky;top:0;z-index:1}
 #planInputPanel .plan45-table .plan45-current{background:#fff7eb}
 #plan16HiddenPane .plan45-permanent{color:#b63142!important;border-color:#e8b5bd!important;margin-left:6px}
-#planInputPanel #plan45Gallery{display:block;padding:8px;min-width:0}
-#plan45Gallery .plan45-gallery-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px}
-#plan45Gallery .plan45-gallery-head strong{font-size:14px}
-#plan45Gallery .plan45-gallery-search{display:flex;gap:6px;margin:8px 0}
-#plan45Gallery .plan45-gallery-search input{flex:1;min-width:0;padding:7px;border:1px solid #adc9e8;border-radius:5px}
+#planInputPanel #plan45Gallery{display:block;min-width:0}
+#plan45Gallery .plan45-gallery-folder{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;margin:5px 0}
+#planInputPanel .plan-record-search{display:flex;gap:6px;margin:8px 0}
+#planInputPanel .plan-record-search input{flex:1;min-width:0;padding:7px;border:1px solid #adc9e8;border-radius:5px}
 #plan45Gallery .plan45-trash-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px;border-bottom:1px solid #d1dfed;font-size:12px}
 #plan45Gallery .plan45-trash-row span{min-width:0;overflow-wrap:anywhere}
 #plan45Gallery .plan45-trash-row button{flex:none}
@@ -5906,7 +5932,7 @@ function plan45GalleryItems(){const val=library(),items=[...seeds.filter(x=>!(va
 function plan45SaveLibrary(){return persist()}
 async function galleryCommit(){if(!plan45SaveLibrary())throw Error('그림칸 관리정보 반영 실패');if(window.planImageCommitSettings&&!await window.planImageCommitSettings())throw Error('그림칸 목록 저장 실패');}
 function plan65GalleryMove(id,target,after=false){if(!id||!target||id===target)return;const order=plan45GalleryItems().map(x=>x.id).filter(x=>x!==id);order.splice(order.indexOf(target)+(after?1:0),0,id);library().order=order;galleryCommit().catch(e=>alert(e.message));plan45RenderGallery()}
-const libraryPanel=make('section','plan45-gallery');libraryPanel.id='plan45Gallery';
+const libraryPanel=make('section','card plan13-list-card plan45-gallery');libraryPanel.id='plan45Gallery';
 function plan45AddImageToPlan(item){const src=window.planImageStore.peek(item.imageRef);if(!src)return alert('그림칸 파일을 읽지 못했습니다. 이미지 폴더를 확인해 주세요: '+item.imageRef);
  const paper=$45('sheetPreview2')?.querySelector('.sheet-paper');if(!paper)return alert('계획도 화면이 없습니다.');const w0=parseFloat(paper.style.width)||720,h0=parseFloat(paper.style.height)||1100;
  const img=new Image();img.onload=()=>{const sc=Math.min(230/img.naturalWidth,230/img.naturalHeight,1),w=Math.max(18,Math.round(img.naturalWidth*sc)),h=Math.max(18,Math.round(img.naturalHeight*sc)),pics=Array.isArray(data.plan28Photos)?data.plan28Photos:[];
@@ -5928,13 +5954,14 @@ async function galleryRestore(host){
    }catch(e){alert(e.message);button.disabled=false}};row.append(button);host.append(row)}
  }catch(e){if(host.isConnected)host.replaceChildren(make('p','plan45-gallery-note','삭제 목록 확인: '+e.message))}
 }
-function plan45RenderGallery(){libraryPanel.replaceChildren();const title=make('div','plan45-gallery-head');title.append(make('strong','','그림칸 · 로컬 이미지'));
- const choose=make('button','btn','📁 그림칸 폴더 변경');choose.onclick=async()=>{try{if(await window.planImageStore.selectFolder())plan45RenderGallery()}catch(e){alert(e.message)}};
- const restore=make('button','btn smallbtn plan13-archived-toggle',galleryArchived?'삭제 항목 접기':'삭제항목보기');restore.type='button';restore.setAttribute('aria-expanded',String(galleryArchived));restore.onclick=()=>{galleryArchived=!galleryArchived;plan45RenderGallery()};
- const add=make('button','btn primary','＋ 이미지 등록'),input=make('input');input.type='file';input.accept='image/png,image/jpeg,image/webp';input.hidden=true;add.onclick=()=>input.click();input.onchange=async()=>{const file=input.files?.[0];if(!file)return;const id='image_'+uid();try{const imageRef=await window.planImageStore.add(file,id);library().items.push({id,imageRef,description:file.name});await galleryCommit();plan45RenderGallery()}catch(e){alert('이미지 등록 실패: '+e.message)}};
- title.append(restore,choose,add,input);libraryPanel.append(title);libraryPanel.append(make('p','plan45-gallery-note','그림 클릭: 계획도에 배치 · 등록 그림 원본은 로컬 그림칸 폴더에 보관 · 계획서 JSON에는 좌표와 파일명만 저장'));
- const state=make('p','plan45-gallery-note','이미지 폴더: '+(window.planImageStore.name||'그림칸 · 기본: 안전-기초/그림칸'));libraryPanel.append(state);
- const searchRow=make('div','plan45-gallery-search');const search=make('input');search.type='search';search.placeholder='그림 설명 · 파일명 검색';search.setAttribute('aria-label','그림 검색');search.value=gallerySearch;
+function plan45RenderGallery(){libraryPanel.replaceChildren();const title=make('div','section-title');const heading=make('div','labelleft');heading.append(make('span','n','5'),make('strong','','그림삽입'));title.append(heading);
+ const choose=make('button','btn smallbtn','📁 그림칸 폴더 변경');choose.onclick=async()=>{try{if(await window.planImageStore.selectFolder())plan45RenderGallery()}catch(e){alert(e.message)}};
+ const restore=make('button','btn smallbtn plan13-archived-toggle',galleryArchived?'삭제 항목 접기':'삭제 항목 보기');restore.id='plan13ArchivedBtn_images';restore.type='button';
+ window.planImageStore.listTrash().then(items=>{if(restore.isConnected&&!galleryArchived)restore.textContent='삭제 항목 '+items.length+'개 보기'}).catch(()=>{});restore.setAttribute('aria-expanded',String(galleryArchived));restore.onclick=()=>{galleryArchived=!galleryArchived;plan45RenderGallery()};
+ const add=make('button','btn smallbtn','＋ 이미지 등록'),input=make('input');input.type='file';input.accept='image/png,image/jpeg,image/webp';input.hidden=true;add.onclick=()=>input.click();input.onchange=async()=>{const file=input.files?.[0];if(!file)return;const id='image_'+uid();try{const imageRef=await window.planImageStore.add(file,id);library().items.push({id,imageRef,description:file.name});await galleryCommit();plan45RenderGallery()}catch(e){alert('이미지 등록 실패: '+e.message)}};
+ title.append(add,restore,input);libraryPanel.append(title);libraryPanel.append(make('p','plan45-gallery-note','그림 클릭: 계획도에 배치 · 등록 그림 원본은 로컬 그림칸 폴더에 보관 · 계획서 JSON에는 좌표와 파일명만 저장'));
+ const state=make('p','plan45-gallery-note','이미지 폴더: '+(window.planImageStore.name||'그림칸 · 기본: 안전-기초/그림칸'));const folderRow=make('div','plan45-gallery-folder');folderRow.append(state,choose);libraryPanel.append(folderRow);
+ const searchRow=make('div','plan-record-search plan45-gallery-search');const search=make('input');search.type='search';search.placeholder='그림 설명 · 파일명 검색';search.setAttribute('aria-label','그림 검색');search.value=gallerySearch;
  const searchButton=make('button','btn smallbtn','검색');searchButton.type='button';
  const applySearch=()=>{gallerySearch=search.value;plan45RenderGallery()};searchButton.onclick=applySearch;search.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();applySearch()}};search.onsearch=applySearch;searchRow.append(search,searchButton);libraryPanel.append(searchRow);
  const results=make('div','plan45-gallery-results');libraryPanel.append(results);
@@ -7335,7 +7362,7 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
     role.onchange=()=>run('권한 변경 중…',async()=>{await authorized('adminSetDevice',{targetDeviceId:d.deviceId,role:role.value});await deviceList();status('기기 권한 변경 완료')});
     const toggle=document.createElement('button');toggle.type='button';toggle.textContent=d.revoked?'사용 재개':'사용 중지';toggle.onclick=()=>{if(!confirm('['+d.label+'] 기기의 서버 백업 사용을 '+(d.revoked?'재개':'중지')+'할까요? 기존 자료는 삭제하지 않습니다.'))return;
      run('기기 사용 상태 변경 중…',async()=>{await authorized('adminSetDevice',{targetDeviceId:d.deviceId,revoked:!d.revoked});await deviceList();status('기기 사용 상태 변경 완료')})};
-    actions.append(role,toggle);
+    const controls=document.createElement('div');controls.className='plan71-device-actions';controls.append(role,toggle);actions.append(controls);
    }
    tr.append(actions);body.append(tr)
   }
