@@ -5570,10 +5570,54 @@ remove.onclick=async()=>{const rec=chosenPhoto();if(!rec||photoLocked(rec))retur
 })();
 
 </script>
+<script id="plan82-folder-layout">
+'use strict';
+/* 안전-기초/{그림칸,계획서/계획서이미지,백업} : 사용자 승인 폴더만 사용.
+   기존 루트의 계획서 JSON을 이동하거나 변경하지 않고 읽기 전용으로 호환한다. */
+(()=>{
+ const DOC=/^[0-9]{8}-[0-9]+\.json$/;
+ async function plans(create=false,root=planFolderHandle){
+  if(!root)throw Error('안전-기초 폴더가 지정되지 않았습니다.');
+  return root.getDirectoryHandle('계획서',{create});
+ }
+ async function backups(create=false,root=planFolderHandle){
+  if(!root)throw Error('안전-기초 폴더가 지정되지 않았습니다.');
+  return root.getDirectoryHandle('백업',{create});
+ }
+ async function ensure(root=planFolderHandle){
+  if(!root)throw Error('저장 폴더를 먼저 지정해 주세요.');
+  let permission=await root.queryPermission({mode:'readwrite'});
+  if(permission!=='granted')throw Error('안전-기초 폴더의 읽기/쓰기 권한이 필요합니다.');
+  // getDirectoryHandle({create:true})는 이미 존재하는 같은 폴더를 재사용한다.
+  const gallery=await root.getDirectoryHandle('그림칸',{create:true});
+  const docs=await plans(true,root);
+  await docs.getDirectoryHandle('계획서이미지',{create:true});
+  const backup=await backups(true,root);
+  return {gallery,docs,backup};
+ }
+ async function planFile(filename,create=false,root=planFolderHandle){
+  if(!DOC.test(String(filename||'')))throw Error('문서 파일명이 올바르지 않습니다.');
+  return (await plans(create,root)).getFileHandle(filename,{create});
+ }
+ async function readPlanFile(filename,root=planFolderHandle){
+  if(!DOC.test(String(filename||'')))throw Error('문서 파일명이 올바르지 않습니다.');
+  // 새 위치를 우선 읽되, 예전 루트 JSON은 그대로 읽을 수 있게 둔다.
+  try{return await planFile(filename,false,root)}
+  catch(e){if(e.name!=='NotFoundError')throw e}
+  return root.getFileHandle(filename);
+ }
+ async function documentScopes(root=planFolderHandle){
+  const result=[root];
+  try{result.push(await plans(false,root))}catch(e){if(e.name!=='NotFoundError')throw e}
+  return result;  // 먼저 루트(구버전), 마지막에 계획서 폴더(최신 우선)
+ }
+ window.planSafeFolders={ensure,plans,backups,planFile,readPlanFile,documentScopes};
+})();
+</script>
 <script id="plan-image-store-v1">
 'use strict';
 /* Gallery images live in [그림칸]. At explicit plan save, a separate physical image
-   copy is kept under the selected plan folder /계획서이미지/<문서번호>/.
+   copy is kept under the selected plan folder /계획서/계획서이미지/<문서번호>/.
    Plans persist that independent filename and geometry. Existing plan files are not migrated.
    Browser IDB stores only approved directory handles. */
 (()=>{
@@ -5591,7 +5635,7 @@ remove.onclick=async()=>{const rec=chosenPhoto();if(!rec||photoLocked(rec))retur
    let permission=await parent.queryPermission({mode:'readwrite'});
    if(permission!=='granted'&&ask)permission=await parent.requestPermission({mode:'readwrite'});
    if(permission!=='granted'){folderStatus='그림칸 · 폴더 접근 승인 필요';notifyFolder();throw Error('그림칸: 저장 폴더 접근을 승인해 주세요.')}
-   try{const child=await parent.getDirectoryHandle('그림칸');
+   try{const child=await parent.getDirectoryHandle('그림칸',{create:true});
     if(!folder||!await folder.isSameEntry(child)){folder=child;cache.clear()}
     if(credential())await dbWrite(entryKey(),folder);
     folderStatus='기본: '+parent.name+'/그림칸';notifyFolder();return folder;
@@ -5640,13 +5684,20 @@ remove.onclick=async()=>{const rec=chosenPhoto();if(!rec||photoLocked(rec))retur
  async function planCopyFolder(id,create=false){
   if(!planIdPattern.test(String(id||'')))throw Error('계획서 그림 복사본의 문서번호가 올바르지 않습니다.');
   if(!planFolderHandle||!await planFolderPermission(false))throw Error('계획서 저장 폴더의 접근 권한이 필요합니다.');
-  const parent=await planFolderHandle.getDirectoryHandle(planImageDir,{create});
+  const docDir=await window.planSafeFolders.plans(create);
+  const parent=await docDir.getDirectoryHandle(planImageDir,{create});
   return parent.getDirectoryHandle(id,{create});
  }
  async function savedCopy(id,fileName){
   if(!filePattern.test(String(fileName||'')))throw Error('계획서 그림 파일명이 올바르지 않습니다.');
-  const dir=await planCopyFolder(id);
-  return dir.getFileHandle(fileName);
+  try{
+   const dir=await planCopyFolder(id);
+   return await dir.getFileHandle(fileName);
+  }catch(e){if(e.name!=='NotFoundError')throw e}
+  // 이전 버전에서 저장한 안전-기초/계획서이미지 복사본은 이동하지 않고 읽기만 한다.
+  const legacy=await planFolderHandle.getDirectoryHandle(planImageDir);
+  const legacyDoc=await legacy.getDirectoryHandle(id);
+  return legacyDoc.getFileHandle(fileName);
  }
  async function readSavedCopy(id,fileName){return bytes(await(await savedCopy(id,fileName)).getFile())}
  async function hydrateDoc(doc){
@@ -5723,7 +5774,7 @@ remove.onclick=async()=>{const rec=chosenPhoto();if(!rec||photoLocked(rec))retur
  function compactDoc(doc){const result=structuredClone(doc);if(Array.isArray(result.plan28Photos))for(const pic of result.plan28Photos){if(pic.imageRef||pic.planImageFile)delete pic.src;}return result}
  async function refs(ref){const ids=new Set(),positions={};const inspect=(id,doc)=>{const pics=(doc?.plan28Photos||[]).filter(p=>p.imageRef===ref);if(pics.length){ids.add(id);positions[id]=pics.map(p=>({id:p.id,imageRef:ref,x:p.x,y:p.y,w:p.w,h:p.h,rotate:p.rotate,locked:!!p.locked}))}};
   for(const [id,doc] of Object.entries(store.documents||{}))inspect(id,doc);if(data?.plan28Photos?.length)inspect(data.id||'현재 미저장 계획서',data);
-  if(planFolderHandle&&await planFolderPermission(false))for await(const [filename,h] of planFolderHandle.entries()){if(h.kind!=='file'||!/^[0-9]{8}-[0-9]+\.json$/.test(filename))continue;try{const obj=JSON.parse(await(await h.getFile()).text());inspect(obj.id||filename.slice(0,-5),obj.document)}catch(e){console.warn('그림 사용처 확인 불가',filename,e)}}
+  if(planFolderHandle&&await planFolderPermission(false))for(const scope of await window.planSafeFolders.documentScopes())for await(const [filename,h] of scope.entries()){if(h.kind!=='file'||!/^[0-9]{8}-[0-9]+\.json$/.test(filename))continue;try{const obj=JSON.parse(await(await h.getFile()).text());inspect(obj.id||filename.slice(0,-5),obj.document)}catch(e){console.warn('그림 사용처 확인 불가',filename,e)}}
   return {ids:[...ids].sort(),positions};}
  // Historical image records may exist in the old 삭제목록 folder.
  // Read the legacy index without modifying it; permanent removal is available only
@@ -5846,7 +5897,7 @@ if(searchPane){
       if(store.documents?.[id])return alert('같은 문서번호가 현재 목록에 이미 있습니다.');
       btn.disabled=true;
       try{
-        const file=await planFolderHandle.getFileHandle(id+'.json');
+        const file=await window.planSafeFolders.readPlanFile(id+'.json');
         const payload=JSON.parse(await(await file.getFile()).text());
         const doc=payload.document;
         if(payload.project!=='안전-작업계획서'||payload.id!==id||!doc||doc.id!==id)throw Error('개별 계획서 원본 형식이 올바르지 않습니다.');
@@ -5983,12 +6034,12 @@ async function plan45PermanentDelete(id){
       const files=new Set(Object.keys(store.documents||{}).filter(x=>/^\d{8}-\d+$/.test(x)).map(x=>x+'.json'));
       // Find app-owned, dated document files even if the folder holds older reports no longer cached locally.
       if(typeof planFolderHandle.entries==='function'){
-        for await(const [filename,handle] of planFolderHandle.entries()){
+        for(const scope of await window.planSafeFolders.documentScopes())for await(const [filename,handle] of scope.entries()){
           if(handle.kind==='file'&&/^\d{8}-\d+\.json$/.test(filename))files.add(filename);
         }
       }
       for(const filename of files){
-        let handle;try{handle=await planFolderHandle.getFileHandle(filename)}catch(e){if(e.name==='NotFoundError')continue;throw e}
+        let handle;try{handle=await window.planSafeFolders.readPlanFile(filename)}catch(e){if(e.name==='NotFoundError')continue;throw e}
         const raw=JSON.parse(await (await handle.getFile()).text());
         if(raw?.project!=='안전-작업계획서'||!raw.document)continue;
         if(!raw.document.plan44Copies?.[id]&&!raw.document.plan16TabContents?.[id])continue;
@@ -6465,9 +6516,9 @@ if(settingsTree){
         // 지정 폴더에서 이 앱의 문서로 확인된 JSON에만 적용하며 다른 파일은 열거나 지우지 않는다.
         const originals=[];const touched=[];
         const files=new Set(Object.keys(store.documents||{}).filter(x=>/^\d{8}-\d+$/.test(x)).map(id=>id+'.json'));
-        if(typeof planFolderHandle.entries==='function')for await(const [name,entry] of planFolderHandle.entries())if(entry.kind==='file'&&/^\d{8}-\d+\.json$/.test(name))files.add(name);
+        if(typeof planFolderHandle.entries==='function')for(const scope of await window.planSafeFolders.documentScopes())for await(const [name,entry] of scope.entries())if(entry.kind==='file'&&/^\d{8}-\d+\.json$/.test(name))files.add(name);
         for(const filename of files){
-          let handle;try{handle=await planFolderHandle.getFileHandle(filename)}catch(err){if(err.name==='NotFoundError')continue;throw err}
+          let handle;try{handle=await window.planSafeFolders.readPlanFile(filename)}catch(err){if(err.name==='NotFoundError')continue;throw err}
           const original=await (await handle.getFile()).text();const obj=JSON.parse(original);
           if(obj?.project!=='안전-작업계획서'||!obj.document||!Array.isArray(obj.document.cargo)||!obj.document.cargo.length)continue;
           obj.document.cargo=[];originals.push({handle,filename,original,updated:JSON.stringify(obj,null,2)});
@@ -6475,7 +6526,7 @@ if(settingsTree){
         // 수정 전에 원본 문서들의 이전 중량물 데이터를 지정 폴더에도 백업.
         const archive={...backup,folderDocuments:originals.map(x=>({filename:x.filename,cargo:JSON.parse(x.original).document.cargo}))};
         const backupName='안전작업계획서_중량물_삭제전백업.json';
-        const backupHandle=await planFolderHandle.getFileHandle(backupName,{create:true});
+        const backupHandle=await (await window.planSafeFolders.backups(true)).getFileHandle(backupName,{create:true});
         const backupWriter=await backupHandle.createWritable();
         try{await backupWriter.write(JSON.stringify(archive,null,2));await backupWriter.close()}catch(err){try{await backupWriter.abort()}catch(_){}throw err}
         try{
@@ -6502,10 +6553,11 @@ if(settingsTree){
   async function plan65DeleteCheckpoint(key){
     if(!planFolderHandle||!await planFolderPermission(false))throw Error('원본 폴더가 연결되지 않아 삭제를 중단합니다.');
     const savedAt=new Date().toISOString();let i=0,name;
+    const backupDir=await window.planSafeFolders.backups(true);
     do{name='안전작업계획서_삭제전복구_'+savedAt.replace(/[-:TZ.]/g,'').slice(0,14)+(i?'_'+i:'')+'.json';i++}
-    while(await planFolderHandle.getFileHandle(name).then(()=>true,e=>{if(e.name==='NotFoundError')return false;throw e}));
+    while(await backupDir.getFileHandle(name).then(()=>true,e=>{if(e.name==='NotFoundError')return false;throw e}));
     const snapshot={project:'안전-작업계획서',version:3,kind:'settings-and-plans',savedAt,store:plan17ReportSnapshot(),settings:plan17ReferenceSnapshot(true),masters:plan17RegisteredMastersSnapshot(true)};
-    const h=await planFolderHandle.getFileHandle(name,{create:true}),w=await h.createWritable();
+    const h=await backupDir.getFileHandle(name,{create:true}),w=await h.createWritable();
     await w.write(JSON.stringify(snapshot,null,2));await w.close();
   }
 
@@ -7699,7 +7751,7 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
  <label for="plan72Code">16자리 기기 등록코드</label><input id="plan72Code" placeholder="마스터에게 받은 등록코드" maxlength="19" autocomplete="off" autocapitalize="characters">
  <label>데이터 저장 폴더</label><button id="plan72Pick" type="button">📁 저장 폴더 지정</button>
  <div id="plan72FolderStatus" role="status">저장 폴더를 아직 선택하지 않았습니다.</div>
- <label>이미지 저장 폴더 (기본: 안전-기초/그림칸)</label><button id="plan72ImagePick" type="button">🖼 그림칸 폴더 지정</button><div id="plan72ImageStatus" role="status">기본: 안전-기초/그림칸</div>
+ <label>자동 생성 폴더</label><div id="plan72ImageStatus" role="status">그림칸 / 계획서 / 계획서/계획서이미지 / 백업</div>
  <p>저장 폴더는 나중에 <b>설정 → 데이터 저장 폴더 관리</b>에서 변경할 수 있습니다. 기존 폴더 자료는 자동으로 삭제하거나 덮어쓰지 않습니다.</p>
  <button class="primary" id="plan72Submit" type="button">기기 등록</button><button id="plan72Cancel" type="button" hidden>기존 기기 권한 화면으로</button><div id="plan72Msg" aria-live="polite"></div>
  </div>`;
@@ -7709,7 +7761,7 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
  let registered=false;
  function setFolderText(){const e=$72('plan72FolderStatus');if(!e)return;e.textContent=planFolderHandle?'선택된 폴더: '+planFolderHandle.name+' (폴더 내용 확인 후 저장)':'저장 폴더를 아직 선택하지 않았습니다.';}
  function imageFolderText(){window.planImageStore.notifyFolder();}
- $72('plan72ImagePick').onclick=async()=>{try{await window.planImageStore.selectFolder();imageFolderText()}catch(e){$72('plan72Msg').textContent=e.message}};
+ // 그림칸은 최초 등록 때 자동 생성한다. 기존 설정 탭의 변경 버튼은 그대로 유지한다.
  function setGate(isOpen){g.hidden=!isOpen;if(isOpen){setFolderText();$72('plan72Name').focus();}}
  window.plan72ShowRegistration=()=>{setGate(true);$72('plan72Msg').textContent='';$72('plan72Cancel').hidden=!cred();};
  $72('plan72Cancel').onclick=()=>{if($72('plan72Submit').disabled)return;setGate(false);window.plan73CancelRegistration?.();};
@@ -7729,7 +7781,8 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   const originalText=$72('plan72Submit').textContent;
   $72('plan72Submit').textContent='기기 등록 확인 중…';
   try{
-   if(!window.planImageStore.folder)await window.planImageStore.useDefault(true);
+   await window.planSafeFolders.ensure(planFolderHandle);
+   await window.planImageStore.useDefault(true);
    const realName=$72('plan70Label'),realCode=$72('plan70Code');realName.value=name;realCode.value=code;
    await window.plan70RegisterDevice(name,code,message=>{msg.textContent=message});
    msg.textContent='기기 등록 및 권한 확인 완료';
@@ -7739,15 +7792,17 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
    console.error('신규 기기등록 오류',e);
   }finally{submitting=false;$72('plan72Submit').disabled=false;$72('plan72Cancel').disabled=false;$72('plan72Submit').textContent=originalText}
  };
- async function exists(name){try{await planFolderHandle.getFileHandle(name);return true}catch(e){if(e.name==='NotFoundError')return false;throw e}}
+ async function exists(name){try{const dir=/^[0-9]{8}-[0-9]+\.json$/.test(name)?await window.planSafeFolders.plans(false):planFolderHandle;await dir.getFileHandle(name);return true}catch(e){if(e.name==='NotFoundError')return false;throw e}}
  const NAMES=['안전작업계획서_기준설정.json','20261023-1.json'];
  async function folderContainsUserData(){
-  for await(const [name] of planFolderHandle.entries())if(/\.json$/i.test(name))return true;
+  for await(const [name,h] of planFolderHandle.entries())if(h.kind==='file'&&/\.json$/i.test(name))return true;
+  for await(const [name,h] of (await window.planSafeFolders.plans(false)).entries())if(h.kind==='file'&&/\.json$/i.test(name))return true;
   return false;
  }
  async function writeNew(name,obj){
   if(await exists(name))throw Error('동시에 같은 이름의 파일이 발견되어 샘플 저장을 중단했습니다: '+name);
-  const h=await planFolderHandle.getFileHandle(name,{create:true}),w=await h.createWritable();
+  const dir=/^[0-9]{8}-[0-9]+\.json$/.test(name)?await window.planSafeFolders.plans(true):planFolderHandle;
+  const h=await dir.getFileHandle(name,{create:true}),w=await h.createWritable();
   try{await w.write(JSON.stringify(obj,null,2));await w.close()}catch(e){try{await w.abort()}catch(_e){}throw e}
   const saved=JSON.parse(await(await h.getFile()).text());
   if(saved?.project!=='안전-작업계획서')throw Error('저장 파일 검증 실패: '+name);
@@ -7788,6 +7843,7 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
  window.plan72FinalizeRegistration=async()=>{
   if(!planFolderHandle)throw Error('저장 폴더 선택 상태를 확인하지 못했습니다.');
   if(!await planFolderPermission(false))throw Error('저장 폴더 접근 권한을 다시 승인해 주세요.');
+  await window.planSafeFolders.ensure(planFolderHandle);
   const note=await seedEmptyFolder();registered=true;setGate(false);$72('plan72Msg').textContent='';
   const status=$72('plan70Status');if(status)status.textContent+='\n'+note;
  };
@@ -7886,7 +7942,7 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   if(!await planFolderPermission(interactive))throw Error('이 PC의 지정 저장 폴더 접근 권한이 없습니다. [폴더 접근 승인]을 눌러 주세요.');
  };
  const read=async(name,handle=planFolderHandle)=>{try{return await(await(await handle.getFileHandle(name)).getFile()).text()}catch(e){if(e.name==='NotFoundError')return null;throw e}};
- const put=async(name,value)=>{const h=await planFolderHandle.getFileHandle(name,{create:true});const w=await h.createWritable();try{await w.write(value);await w.close()}catch(e){try{await w.abort()}catch(_){ }throw e}};
+ const put=async(name,value)=>{const h=/^[0-9]{8}-[0-9]+\.json$/.test(name)?await window.planSafeFolders.planFile(name,true):await planFolderHandle.getFileHandle(name,{create:true});const w=await h.createWritable();try{await w.write(value);await w.close()}catch(e){try{await w.abort()}catch(_){ }throw e}};
  const imageSig=doc=>JSON.stringify(doc?.plan28Photos||[]);
  const copy=x=>structuredClone(x);
  const now=()=>new Date().toISOString();
@@ -7894,7 +7950,7 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   // Minimal UI state, not a second plan list. Document titles and thumbnails are read from each plan JSON.
   ui:{currentId:store.currentId||'',deleted:Object.fromEntries(Object.entries(store.planDeletedDocuments||{}).map(([id,val])=>[id,typeof val==='string'?val:val?.deletedAt||now()]))}});
  // The folder itself is the search source. No separate list or photo duplicate is saved.
- const readJSON=async name=>{const text=await read(name);if(text===null)return null;let p;try{p=JSON.parse(text)}catch(e){throw Error('저장 폴더의 JSON 파일 형식 오류: '+name)}if(p?.project!=='안전-작업계획서')throw Error('저장 폴더의 자료 형식 오류: '+name);return p};
+ const readJSON=async name=>{let text;if(/^[0-9]{8}-[0-9]+\.json$/.test(name)){try{text=await (await (await window.planSafeFolders.readPlanFile(name)).getFile()).text()}catch(e){if(e.name==='NotFoundError')return null;throw e}}else text=await read(name);if(text===null)return null;let p;try{p=JSON.parse(text)}catch(e){throw Error('저장 폴더의 JSON 파일 형식 오류: '+name)}if(p?.project!=='안전-작업계획서')throw Error('저장 폴더의 자료 형식 오류: '+name);return p};
  let timer=null,writing=Promise.resolve(),version=0,flushed=0,lastError=null;
  let loading=false;
  function status(msg){const el=document.getElementById('saveStatus');if(el)el.textContent=msg;planFolderState(msg)}
@@ -7952,9 +8008,11 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
    const legacyDocs=copy(oldPlan?.store?.documents||{});
    for(const doc of Object.values(legacyDocs))await window.planImageStore.hydrateDoc(doc);
    const docs={...legacyDocs};let directCount=0;
-   for await(const [name,h] of handle.entries()){
+   for(const scope of await window.planSafeFolders.documentScopes(handle))for await(const [name,h] of scope.entries()){
     if(h.kind!=='file'||!/^[0-9]{8}-[0-9]+\.json$/.test(name))continue;
-    const entry=await readJSON(name);
+    const raw=await(await h.getFile()).text();
+    let entry;try{entry=JSON.parse(raw)}catch(e){throw Error('개별 계획서 JSON 형식 오류: '+name)}
+    if(entry?.project!=='안전-작업계획서')throw Error('개별 계획서 형식 오류: '+name);
     if(entry?.document&&entry.id){docs[entry.id]=await window.planImageStore.hydrateDoc(copy(entry.document));directCount++}
    }
    window.plan75NewDeviceEmpty=!legacyList&&!combined&&!settings&&!directCount;
@@ -8007,15 +8065,16 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   const previous=planFolderHandle;
   if(previous&&!confirm('등록기기의 저장 폴더를 변경하시겠습니까?\n현재 폴더의 파일은 그대로 보존됩니다.'))return false;
   let next;try{next=await window.showDirectoryPicker({id:'safety-work-plan',mode:'readwrite'})}catch(e){if(e.name==='AbortError')return false;throw e}
-  if(previous&&await previous.isSameEntry(next)){await planFolderPermission(true);await window.planImageStore.useDefault(true);await window.planImageStore.preload();await window.planImageStore.refreshDocuments();await window.plan73RetryFolderLoad?.();planFolderState('기존 지정 폴더 유지: '+next.name);return true}
+  if(previous&&await previous.isSameEntry(next)){await planFolderPermission(true);await window.planSafeFolders.ensure(next);await window.planImageStore.useDefault(true);await window.planImageStore.preload();await window.planImageStore.refreshDocuments();await window.plan73RetryFolderLoad?.();planFolderState('기존 지정 폴더 유지: '+next.name);return true}
   const grant=await next.queryPermission({mode:'readwrite'});
   if(grant!=='granted'&&await next.requestPermission({mode:'readwrite'})!=='granted')throw Error('새 폴더 권한이 승인되지 않았습니다.');
   const old=planFolderHandle;planFolderHandle=next;
   try{
    // Inspect before recording a change; no files are overwritten on folder selection.
    let existing=await readJSON(COMBINED)||await readJSON(LEGACY_DOCS)||await readJSON(SETTINGS);
-   if(!existing)for await(const [name,h] of next.entries())if(h.kind==='file'&&/^[0-9]{8}-[0-9]+\.json$/.test(name)){existing=true;break}
+   if(!existing)for(const scope of await window.planSafeFolders.documentScopes(next))for await(const [name,h] of scope.entries())if(h.kind==='file'&&/^[0-9]{8}-[0-9]+\.json$/.test(name)){existing=true;break}
    if(existing&&!confirm('새 폴더에 이미 계획서 자료가 있습니다.\n이 폴더의 자료를 열어 기존 폴더 연결을 바꾸시겠습니까?\n기존 폴더의 파일은 유지됩니다.')){planFolderHandle=old;return false}
+   await window.planSafeFolders.ensure(next);
    await rememberPlanFolder(next);planFolderPaused=false;
    try{await window.planImageStore.useDefault(true);await window.planImageStore.preload();await window.planImageStore.refreshDocuments()}catch(e){console.warn(e.message)}
    if(existing){await loadFromFolder()}else {window.plan75NewDeviceEmpty=false;planFolderState('변경된 빈 폴더 지정: '+next.name+' · 저장 버튼을 눌러 현재 자료 저장');}
@@ -8201,7 +8260,8 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   let p=await next.queryPermission({mode:'readwrite'});
   if(p!=='granted')p=await next.requestPermission({mode:'readwrite'});
   if(p!=='granted')throw Error('저장 폴더 접근 권한을 허용해 주세요.');
-  // Selecting a folder for registration must not load or overwrite any documents.
+  // 선택 단계에서는 기존 파일을 열거나 덮어쓰지 않고 기본 하위폴더만 생성한다.
+  await window.planSafeFolders.ensure(next);
   planFolderHandle=next;return true;
  };
  const credentials=()=>{try{const c=JSON.parse(localStorage.getItem(CREDENTIAL)||'null');return c?.deviceId&&c?.deviceToken?c:null}catch(_){return null}};
@@ -8435,10 +8495,10 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
   folder.querySelectorAll('button').forEach(b=>{
    const action=b.getAttribute('onclick')||'';
    if(/saveCurrentIntoPlanFolder|importPlanFolderData/.test(action))b.remove();
-   else if(action.includes('choosePlanFolder'))b.textContent='계획서 폴더 지정·변경';
+   else if(action.includes('choosePlanFolder'))b.textContent='안전-기초 폴더 지정·변경';
    else if(action.includes('authorizePlanFolder'))b.textContent='폴더 접근 재승인';
   });
-  const hint=folder.querySelector('.plan-folder-hint');if(hint)hint.textContent='계획서 저장 폴더: 안전-기초 / 기본 이미지 폴더: 안전-기초/그림칸 · 계획서는 상단 [계획서 저장]에서만 수동 저장됩니다.';
+  const hint=folder.querySelector('.plan-folder-hint');if(hint)hint.textContent='안전-기초 아래 그림칸 · 계획서(계획서이미지 포함) · 백업 폴더를 자동 관리합니다. 계획서는 상단 [계획서 저장]에서만 저장합니다.';
   const fStatus=document.getElementById('planFolderStatus');if(fStatus&&/자동 저장/.test(fStatus.textContent||''))fStatus.textContent='계획서 저장: 상단 버튼을 누를 때만 실행';
  }
  let localActions=null;
