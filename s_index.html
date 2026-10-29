@@ -727,6 +727,7 @@ body.plan-dragging{cursor:col-resize!important;user-select:none!important}
 #plan71DeviceList .plan71-device-actions{display:flex;align-items:center;justify-content:center;gap:4px}
 #plan71DeviceList .plan71-device-actions select{width:auto;max-width:100%;flex:0 0 auto}
 #plan71DeviceList .plan71-device-actions button{flex:0 0 auto;white-space:nowrap}
+#plan71DeviceList .plan71-device-delete{color:#b53340;border-color:#e9bbc1;padding:5px 7px}
 @container(max-width:600px){
  #plan71DeviceList .plan71-device-actions{flex-direction:column;align-items:stretch}
  #plan71DeviceList th,#plan71DeviceList td{padding:5px 3px;white-space:normal;overflow-wrap:anywhere}
@@ -7517,7 +7518,7 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
    <div class="plan70-controls"><label for="plan71NewRole">신규 기기 권한</label><select id="plan71NewRole"><option value="editor">서버 백업·조회</option><option value="viewer">서버 조회 전용</option></select><button id="plan71Issue" type="button">1회용 등록코드 발급</button><button id="plan71Reload" type="button">등록기기 조회</button></div>
    <div id="plan71CodeResult" class="plan71-code" aria-live="polite"></div>
    <div id="plan71DeviceList" class="plan71-list"></div>
-   <p class="plan70-hint">기기 사용중지를 선택하면 공식 웹프로그램의 계획서 조회·수정·저장 화면도 잠깁니다. 서버에 이미 저장된 백업과 PC 폴더 자료는 지우지 않습니다. PC 로컬 파일의 열람 권한을 이 기능만으로 통제할 수는 없습니다.</p>
+   <p class="plan70-hint">기기 사용중지는 접속만 막고, 삭제는 해당 기기 등록정보만 서버에서 영구 제거합니다. 삭제된 기기는 새 등록코드로 재등록해야 합니다. 서버에 이미 저장된 백업과 PC 폴더 자료는 지우지 않습니다. PC 로컬 파일의 열람 권한을 이 기능만으로 통제할 수는 없습니다.</p>
  </div>
  <div class="plan70-hint">로컬 저장 폴더와 서버 백업은 별개입니다. 서버 기기등록용 토큰만 브라우저에 보관합니다. 백업은 사용자가 누를 때만 실행됩니다. [선택 서버 백업 검증]은 서버 파일 4종의 크기·해시·JSON 구조만 검사하며, 로컬 자료를 변경하거나 실제 복원하지 않습니다.</div>`;
  const settings=document.getElementById('planDataPane_settings');
@@ -7630,7 +7631,19 @@ window.plan73StartStorage=()=>plan66InitializeStorage();
     role.onchange=()=>run('권한 변경 중…',async()=>{await authorized('adminSetDevice',{targetDeviceId:d.deviceId,role:role.value});await deviceList();status('기기 권한 변경 완료')});
     const toggle=document.createElement('button');toggle.type='button';toggle.textContent=d.revoked?'사용 재개':'사용 중지';toggle.onclick=()=>{if(!confirm('['+d.label+'] 기기의 서버 백업 사용을 '+(d.revoked?'재개':'중지')+'할까요? 기존 자료는 삭제하지 않습니다.'))return;
      run('기기 사용 상태 변경 중…',async()=>{await authorized('adminSetDevice',{targetDeviceId:d.deviceId,revoked:!d.revoked});await deviceList();status('기기 사용 상태 변경 완료')})};
-    const controls=document.createElement('div');controls.className='plan71-device-actions';controls.append(role,toggle);actions.append(controls);
+    // 기기 삭제는 마스터 권한으로만 서버에서 처리한다. PC 자료/서버 백업은 변경하지 않는다.
+    const remove=document.createElement('button');remove.type='button';remove.className='plan71-device-delete';remove.textContent='삭제';
+    remove.title='이 기기의 서버 등록정보만 영구 삭제합니다. 저장된 계획서와 서버 백업은 유지됩니다.';
+    remove.onclick=()=>{
+     const label=String(d.label||'등록 기기');
+     if(!confirm('['+label+'] 기기의 등록정보를 완전히 삭제하시겠습니까?\n\n• 이 기기는 즉시 사용 및 인증이 불가능해집니다.\n• 다시 사용하려면 새 등록코드로 기기 등록이 필요합니다.\n• PC 폴더 자료와 기존 서버 백업은 삭제하지 않습니다.'))return;
+     run('기기 등록정보 삭제 중…',async()=>{
+      const result=await authorized('adminDeleteDevice',{targetDeviceId:d.deviceId});
+      if(!result?.deleted)throw Error('서버에서 기기 삭제 완료를 확인하지 못했습니다.');
+      await deviceList();status('['+label+'] 기기 등록정보 삭제 완료 · 계획서 및 서버 백업 유지');
+     });
+    };
+    const controls=document.createElement('div');controls.className='plan71-device-actions';controls.append(role,toggle,remove);actions.append(controls);
    }
    tr.append(actions);body.append(tr)
   }
