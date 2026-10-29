@@ -1882,6 +1882,16 @@ const plan13ShowArchived={person:false,equipment:false,cargo:false};
 // 삭제 목록 전용 선택. 계획서에 참여할 인원 체크(data.persons)와 절대 공유하지 않는다.
 const plan85ArchivedPersonSelection=new Set();
 let plan85ArchiveDeleteBusy=false;
+// 마지막 삭제 항목 처리 후 삭제 전용 보기만 종료한다. 등록된 다른 인력은 변경하지 않는다.
+function plan85ReturnToActivePeopleIfEmpty(){
+ if(!plan13ShowArchived.person||masters.persons.some(x=>x.archived))return false;
+ plan13ShowArchived.person=false;
+ plan85ArchivedPersonSelection.clear();
+ // 삭제 대상 검색어가 일반 인력 목록을 가리지 않게 한다.
+ plan13ListQuery.person='';
+ const input=document.getElementById('plan13Search_person');if(input)input.value='';
+ return true;
+}
 function plan85ToggleArchivedPerson(id,checked){
  const valid=masters.persons.some(x=>x.id===id&&x.archived);
  if(!plan13ShowArchived.person||!valid)return;
@@ -1893,7 +1903,7 @@ const plan13ListQuery={person:'',equipment:''};
 function plan13VisibleRecords(kind){
  const selected=plan13RecordSelected(kind)||[],query=(plan13ListQuery[kind]||'').trim().toLocaleLowerCase();
  const text=value=>Array.isArray(value)?value.map(text).join(' '):value&&typeof value==='object'?Object.entries(value).filter(([key])=>!['id','photo','src','archived'].includes(key)).map(([,v])=>text(v)).join(' '):String(value??'');
- return plan13RecordSource(kind).filter(x=>(plan13ShowArchived[kind]?!!x.archived:(!x.archived||selected.includes(x.id)))&&(!query||text(x).toLocaleLowerCase().includes(query)));
+ return plan13RecordSource(kind).filter(x=>(plan13ShowArchived[kind]?!!x.archived:(kind==='person'?!x.archived:(!x.archived||selected.includes(x.id))))&&(!query||text(x).toLocaleLowerCase().includes(query)));
 }
 function plan13MountListSearch(kind,heading){
  if(!['person','equipment'].includes(kind)||document.getElementById('plan13Search_'+kind))return;
@@ -1911,7 +1921,8 @@ function plan13RefreshArchiveButtons(){
   const btn=$('plan13ArchivedBtn_'+kind);if(!btn)continue;
   const n=plan13RecordSource(kind).filter(x=>x.archived).length;
   if(plan13ListQuery[kind]&&!plan13VisibleRecords(kind).length){const empty=document.querySelector(kind==='person'?'#personRows .empty':'#equipmentRows .empty');if(empty)empty.textContent='검색 결과가 없습니다.'}
-  btn.hidden=!n;btn.textContent=plan13ShowArchived[kind]?'삭제 항목 접기':'삭제 항목 '+n+'개 보기';
+  // 삭제 목록이 0건이어도 조회 버튼은 항상 표시한다.
+  btn.hidden=false;btn.textContent=plan13ShowArchived[kind]?'삭제 항목 접기':'삭제 항목 '+n+'개 보기';
   if(kind==='person'){
    for(const id of [...plan85ArchivedPersonSelection]){
     if(!plan13VisibleRecords('person').some(p=>p.archived&&p.id===id))plan85ArchivedPersonSelection.delete(id);
@@ -2029,6 +2040,7 @@ function plan13RestoreRecord(kind,id){
  const record=plan13RecordSource(kind).find(x=>x.id===id);if(!record||!record.archived)return;
  record.archived=false;delete record.archivedAt;
  if(!persist())return alert('자료 복원 저장에 실패했습니다.');
+ if(kind==='person')plan85ReturnToActivePeopleIfEmpty();
  renderPersons();renderEquipments();plan13RenderCargo();updateSummary();syncPreview();toast('등록 자료를 복원했습니다.');
 }
 // Safe permanent deletion is offered only in the archived list. Never remove records referenced by any saved plan.
@@ -2081,7 +2093,7 @@ async function plan85DeleteArchivedRecords(kind,requestedIds){
    const savedList=saved?.settings?.registeredMasters?.[kind==='person'?'persons':kind==='equipment'?'equipment':'cargo'];
    if(!Array.isArray(savedList)||savedList.some(x=>doomed.has(x.id)))throw Error('기준설정 파일 삭제 결과 확인에 실패했습니다.');
   }
-  if(kind==='person')for(const id of ids)plan85ArchivedPersonSelection.delete(id);
+  if(kind==='person'){for(const id of ids)plan85ArchivedPersonSelection.delete(id);plan85ReturnToActivePeopleIfEmpty()}
   renderPersons();renderEquipments();plan13RenderCargo();syncPreview();updateSummary();
   toast(kindName+' '+targets.length+'건 완전삭제 완료');
   return true;
@@ -4224,7 +4236,7 @@ remove.onclick=async()=>{const rec=chosenPhoto();if(!rec||photoLocked(rec))retur
   table.style.setProperty('width',widths.reduce((a,b)=>a+b,0)+'px','important');
   table.style.setProperty('min-width',widths.reduce((a,b)=>a+b,0)+'px','important');
   const people=plan13VisibleRecords('person');
-  body.innerHTML=people.length?people.map(rec=>'<tr><td class="plan32-select-cell">'+(plan13ShowArchived.person?'<input type="checkbox" '+(plan85ArchivedPersonSelection.has(rec.id)?'checked':'')+' aria-label="'+esc(rec.name)+' 삭제 대상 선택" onchange="plan85ToggleArchivedPerson(\''+rec.id+'\',this.checked)">':'<input type="checkbox" '+(data.persons.includes(rec.id)?'checked':'')+' '+(rec.archived?'disabled':'')+' aria-label="'+esc(rec.name)+' 선택" onchange="togglePerson(\''+rec.id+'\',this.checked)">')+'</td><td class="plan32-actions-cell">'+plan13ManageButtons('person',rec.id,rec.archived)+'</td>'+columns.map(col=>drawPersonCell(rec,col)).join('')+'</tr>').join(''):'<tr><td colspan="'+(2+columns.reduce((n,c)=>n+(c.key==='role'?6:1),0))+'" class="empty">등록된 인력이 없습니다.</td></tr>';
+  body.innerHTML=people.length?people.map(rec=>'<tr><td class="plan32-select-cell">'+(plan13ShowArchived.person?'<input type="checkbox" '+(plan85ArchivedPersonSelection.has(rec.id)?'checked':'')+' aria-label="'+esc(rec.name)+' 삭제 대상 선택" onchange="plan85ToggleArchivedPerson(\''+rec.id+'\',this.checked)">':'<input type="checkbox" '+(data.persons.includes(rec.id)?'checked':'')+' '+(rec.archived?'disabled':'')+' aria-label="'+esc(rec.name)+' 선택" onchange="togglePerson(\''+rec.id+'\',this.checked)">')+'</td><td class="plan32-actions-cell">'+plan13ManageButtons('person',rec.id,rec.archived)+'</td>'+columns.map(col=>drawPersonCell(rec,col)).join('')+'</tr>').join(''):'<tr><td colspan="'+(2+columns.reduce((n,c)=>n+(c.key==='role'?6:1),0))+'" class="empty">'+(plan13ShowArchived.person?'삭제된 인력이 없습니다.':'등록된 인력이 없습니다.')+'</td></tr>';
   makeBulkHeader('person',table);
   if(scroll)scroll.scrollLeft=savedScroll;
  };
@@ -5934,7 +5946,8 @@ if(searchPane){
     const pages=Math.max(1,Math.ceil(ids.length/30));deletedPage=Math.max(0,Math.min(deletedPage,pages-1));
     const wrap=make('div','plan45-table-wrap'),table=make('table','plan45-table plan80-deleted-table');
     const head=make('thead'),th=make('tr');
-    for(const label of ['관리','문서번호','삭제일','상태'])th.append(make('th','',label));
+    // 일반 계획서 검색 결과와 동일한 열 구성 및 너비를 사용한다.
+    for(const label of ['관리','문서번호','작성일(수정일)','제목','업체','기종','모델명','성능','자격·면허','반입일','작업위치','최종 저장'])th.append(make('th','',label));
     head.append(th);table.append(head);
     const tbody=make('tbody');
     const restore=async(id,btn)=>{
@@ -5969,7 +5982,10 @@ if(searchPane){
       tr.append(actions,make('td','plan80-deleted-id',id));
       const mark=marks[id];const time=typeof mark==='string'?mark:mark?.deletedAt||'';
       const parsed=new Date(time);const date=Number.isNaN(parsed.getTime())?time:parsed.toLocaleString('ko-KR');
-      tr.append(make('td','',date),make('td','','복원 가능 여부는 원본 확인 후 결정'));
+      // 삭제 표시에는 문서 본문이 없으므로, 확인하지 않은 원래 정보를 지어내지 않는다.
+      tr.append(make('td','', '-'),make('td','','삭제된 계획서'));
+      for(let i=0;i<7;i++)tr.append(make('td','', '-'));
+      const last=make('td','',date?'삭제일: '+date:'삭제됨');last.title='삭제 상태가 기록된 시각';tr.append(last);
       tbody.append(tr);
     }
     table.append(tbody);wrap.append(table);box.append(wrap);
@@ -8934,8 +8950,8 @@ html:not([data-plan83-setting-master="yes"]) .plan-setting-category.add,html:not
 #plan45Gallery .plan45-hidden-list .plan45-trash-actions>.btn{flex:0 0 auto!important;font-size:10px!important;padding:4px 5px!important}
 .plan80-deleted-inline-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:5px;padding:7px 4px;color:#17365d;font-size:12px}
 .plan80-deleted-inline-head>span{font-size:10px;color:#5e7790}
-.plan80-deleted-table{width:100%;min-width:450px!important}
-.plan80-deleted-table th,.plan80-deleted-table td{white-space:nowrap!important;text-align:center!important;padding:5px 7px!important;font-size:11px!important}
+.plan80-deleted-table{width:max-content!important;min-width:100%!important}
+.plan80-deleted-table th,.plan80-deleted-table td{white-space:nowrap!important;text-align:left!important;padding:7px 9px!important;font-size:11px!important}
 .plan80-deleted-table .plan80-deleted-id{font-weight:800;color:#0a6fcf}
 @container(max-width:430px){#plan45Gallery .plan45-hidden-list .plan45-trash-card{grid-template-columns:44px minmax(0,1fr)!important}#plan45Gallery .plan45-hidden-list .plan45-trash-actions{grid-column:2!important;justify-content:flex-start!important}#plan45Gallery .plan45-hidden-list .plan45-gallery-picture{width:40px!important;height:40px!important}}
 </style>
