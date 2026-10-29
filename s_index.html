@@ -1879,6 +1879,16 @@ function plan13Setup(){
 function plan13RecordSource(kind){return kind==='person'?masters.persons:kind==='equipment'?masters.equipment:masters.cargo}
 function plan13RecordSelected(kind){return kind==='person'?data.persons:kind==='equipment'?data.equipment:data.cargo}
 const plan13ShowArchived={person:false,equipment:false,cargo:false};
+// 삭제 목록 전용 선택. 계획서에 참여할 인원 체크(data.persons)와 절대 공유하지 않는다.
+const plan85ArchivedPersonSelection=new Set();
+let plan85ArchiveDeleteBusy=false;
+function plan85ToggleArchivedPerson(id,checked){
+ const valid=masters.persons.some(x=>x.id===id&&x.archived);
+ if(!plan13ShowArchived.person||!valid)return;
+ if(checked)plan85ArchivedPersonSelection.add(id);else plan85ArchivedPersonSelection.delete(id);
+ renderPersons();
+}
+
 const plan13ListQuery={person:'',equipment:''};
 function plan13VisibleRecords(kind){
  const selected=plan13RecordSelected(kind)||[],query=(plan13ListQuery[kind]||'').trim().toLocaleLowerCase();
@@ -1902,9 +1912,19 @@ function plan13RefreshArchiveButtons(){
   const n=plan13RecordSource(kind).filter(x=>x.archived).length;
   if(plan13ListQuery[kind]&&!plan13VisibleRecords(kind).length){const empty=document.querySelector(kind==='person'?'#personRows .empty':'#equipmentRows .empty');if(empty)empty.textContent='검색 결과가 없습니다.'}
   btn.hidden=!n;btn.textContent=plan13ShowArchived[kind]?'삭제 항목 접기':'삭제 항목 '+n+'개 보기';
+  if(kind==='person'){
+   for(const id of [...plan85ArchivedPersonSelection]){
+    if(!plan13VisibleRecords('person').some(p=>p.archived&&p.id===id))plan85ArchivedPersonSelection.delete(id);
+   }
+   let bulk=$('plan85ArchivedPersonDelete');
+   if(!bulk){bulk=document.createElement('button');bulk.id='plan85ArchivedPersonDelete';bulk.type='button';bulk.className='btn smallbtn danger';bulk.title='삭제 목록에서 체크한 인력만 영구삭제 (기존 계획서에서 참조 중인 인력은 보호)';bulk.onclick=()=>plan85DeleteArchivedRecords('person',[...plan85ArchivedPersonSelection]);btn.insertAdjacentElement('afterend',bulk)}
+   bulk.hidden=!plan13ShowArchived.person||!n;
+   bulk.disabled=plan85ArchiveDeleteBusy||plan85ArchivedPersonSelection.size===0;
+   bulk.textContent='선택 완전삭제'+(plan85ArchivedPersonSelection.size?' ('+plan85ArchivedPersonSelection.size+')':'');
+  }
  }
 }
-function plan13ToggleArchiveList(kind){plan13ShowArchived[kind]=!plan13ShowArchived[kind];renderPersons();renderEquipments();plan13RenderCargo()}
+function plan13ToggleArchiveList(kind){plan13ShowArchived[kind]=!plan13ShowArchived[kind];if(kind==='person')plan85ArchivedPersonSelection.clear();renderPersons();renderEquipments();plan13RenderCargo()}
 function plan13AddArchiveButton(kind,heading){if(!heading)return;
  const btn=document.createElement('button');btn.type='button';btn.className='btn smallbtn plan13-archived-toggle';btn.id='plan13ArchivedBtn_'+kind;btn.hidden=true;
  btn.onclick=()=>plan13ToggleArchiveList(kind);heading.appendChild(btn);plan13MountListSearch(kind,heading)
@@ -2012,12 +2032,16 @@ function plan13RestoreRecord(kind,id){
  renderPersons();renderEquipments();plan13RenderCargo();updateSummary();syncPreview();toast('등록 자료를 복원했습니다.');
 }
 // Safe permanent deletion is offered only in the archived list. Never remove records referenced by any saved plan.
-async function plan13DeletePermanently(kind,id){
- if(!['person','cargo','equipment'].includes(kind))return;
- const source=plan13RecordSource(kind),index=source.findIndex(x=>x.id===id&&x.archived);
- if(index<0)return alert('완전삭제는 삭제(숨김) 목록에 있는 항목만 가능합니다.');
- const rec=source[index],name=rec.name||rec.type||'-';
- const docRef=doc=>{
+// 등록목록의 영구삭제는 계획서 자동저장 여부와 분리하고, 등록정보 폴더만 갱신한다.
+// 기존 계획서에서 참조되는 항목은 어떤 경우에도 제거하지 않는다.
+async function plan85DeleteArchivedRecords(kind,requestedIds){
+ if(plan85ArchiveDeleteBusy||!['person','cargo','equipment'].includes(kind))return false;
+ const ids=[...new Set((Array.isArray(requestedIds)?requestedIds:[]).filter(Boolean))];
+ const records=plan13RecordSource(kind),targets=ids.map(id=>records.find(x=>x.id===id&&x.archived)).filter(Boolean);
+ if(!targets.length){alert('삭제 목록에서 완전삭제할 항목을 먼저 선택하세요.');return false}
+ if(targets.length!==ids.length){alert('일부 항목이 이미 복원되었거나 삭제되었습니다. 목록을 새로 확인하세요.');return false}
+ const kindName=kind==='person'?'인력':kind==='cargo'?'중량물':'장비';
+ const docRef=(doc,id)=>{
   if(!doc||typeof doc!=='object')return false;
   const key=kind==='person'?'persons':kind==='cargo'?'cargo':'equipment';
   if(Array.isArray(doc[key])&&doc[key].includes(id))return true;
@@ -2025,44 +2049,55 @@ async function plan13DeletePermanently(kind,id){
   if(kind==='equipment'&&doc.plan23EquipmentId===id)return true;
   return false;
  };
- const references=[];
- if(docRef(data))references.push('현재 작성 화면');
- if(docRef(store.draft))references.push('임시저장 문서');
- for(const [docId,doc] of Object.entries(store.documents||{}))if(docRef(doc))references.push('저장문서 '+docId);
- if(references.length){
-  alert('기존 계획서에서 참조 중인 자료는 완전삭제할 수 없습니다.\n\n'+references.slice(0,8).join('\n')+(references.length>8?'\n외 '+(references.length-8)+'건':'')+'\n\n기존 자료·사진 보호를 위해 복원 기능을 이용해 주세요.');
-  return;
+ const documents=[['현재 작성 화면',data],['임시저장 문서',store.draft],...Object.entries(store.documents||{}).map(([id,doc])=>['저장문서 '+id,doc])];
+ const conflicts=[];
+ for(const rec of targets){
+  const used=documents.filter(([,doc])=>docRef(doc,rec.id)).map(([name])=>name);
+  if(used.length)conflicts.push((rec.name||rec.type||rec.id)+' : '+used.slice(0,3).join(', '));
  }
- const kindName=kind==='person'?'인력':kind==='cargo'?'중량물':'장비';
- if(!confirm(kindName+' 「'+name+'」을 완전삭제하시겠습니까?\n'+(rec.photo?'등록 정보와 사진이':'등록 정보가')+' 현재 저장소에서 제거되며, 복원 목록에서도 사라집니다.\n지정된 폴더의 안전 작업계획서 통합 등록자료도 함께 갱신됩니다. 이전 별도 백업은 삭제하지 않습니다.'))return;
+ if(conflicts.length){alert('기존 계획서가 참조 중인 '+kindName+'은 완전삭제할 수 없습니다.\n\n'+conflicts.slice(0,8).join('\n')+(conflicts.length>8?'\n외 '+(conflicts.length-8)+'건':'')+'\n\n기존 계획서와 사진을 보호하기 위해 삭제를 취소했습니다.');return false}
  if(planFolderHandle){
   try{
-   if(planFolderPaused||!await planFolderPermission(true))throw Error('폴더 동기화 및 쓰기 권한을 먼저 승인해 주세요.');
-   const archive=await planReadFolderArchive();
-   const docs=archive?.store?.documents||{};
-   if(Object.values(docs).some(doc=>docRef(doc)))throw Error('폴더의 기존 저장문서가 이 항목을 참조하고 있습니다. 해당 자료는 삭제할 수 없습니다.');
-  }catch(e){return alert('폴더 자료를 안전하게 확인하지 못해 삭제를 중단했습니다. '+e.message)}
+   if(!await planFolderPermission(true))throw Error('저장 폴더 접근 권한을 먼저 승인해 주세요.');
+   // 구형 통합 백업에도 참조 중인 계획서가 있다면 보존한다. 자동 계획서 저장은 요구하지 않는다.
+   const archive=await planReadFolderArchive(),savedDocs=archive?.store?.documents||{};
+   const oldConflicts=targets.filter(rec=>Object.values(savedDocs).some(doc=>docRef(doc,rec.id)));
+   if(oldConflicts.length)throw Error('기존 폴더의 저장 계획서가 '+oldConflicts.map(x=>x.name||x.id).join(', ')+' 항목을 참조하고 있어 삭제할 수 없습니다.');
+  }catch(err){alert('등록자료의 저장 폴더를 확인하지 못해 삭제를 중단했습니다. '+err.message);return false}
  }
- source.splice(index,1);
- if(!persist()){
-  source.splice(index,0,rec);
-  try{plan17WriteReferenceLocal();}catch(err){console.error('완전삭제 롤백 저장:',err)}
-  alert('저장에 실패하여 완전삭제를 취소했습니다. 기존 등록 자료는 유지됩니다.');return;
- }
- if(planFolderHandle){
-  try{
-   if(!await flushPlanFolderSync())throw Error('폴더 통합 데이터 갱신이 완료되지 않았습니다.');
-   if(!await plan17WriteReferenceFolder(true))throw Error('폴더의 기준설정 등록정보 갱신이 취소됐습니다.');
-  }catch(e){
-   source.splice(index,0,rec);persist();
-   try{await flushPlanFolderSync();await plan17WriteReferenceFolder(true)}catch(err){console.error('폴더 복구 점검 필요:',err)}
-   renderPersons();renderEquipments();plan13RenderCargo();syncPreview();updateSummary();
-   return alert('폴더 저장 확인에 실패해 브라우저 항목을 복원했습니다. 폴더 파일 동기화를 확인해 주세요. '+e.message);
+ const names=targets.map(x=>x.name||x.type||'-');
+ if(!confirm(kindName+' '+targets.length+'건을 완전삭제하시겠습니까?\n'+names.slice(0,5).join(', ')+(names.length>5?' 외 '+(names.length-5)+'건':'')+'\n등록정보와 사진이 복원 목록에서도 사라집니다. 기존 계획서와 이전 백업 파일은 변경하지 않습니다.'))return false;
+ plan85ArchiveDeleteBusy=true;
+ const before=records.slice();
+ try{
+  const doomed=new Set(ids);
+  // 원본 객체는 유지하며 등록 배열의 내용만 변경한다.
+  for(let i=records.length-1;i>=0;i--)if(doomed.has(records[i].id))records.splice(i,1);
+  if(!persist()||!await plan66FlushPersistence())throw Error('등록자료 임시 보관에 실패했습니다.');
+  if(planFolderHandle){
+   // 여기서는 flushPlanFolderSync()를 호출하지 않는다. 그 함수는 계획서 자동저장이 꺼져 있으면 false를 반환한다.
+   if(!await plan17WriteReferenceFolder(true))throw Error('인력·장비 기준설정 파일 저장이 취소되었습니다.');
+   const saved=await plan17ReadReferenceFolder();
+   const savedList=saved?.settings?.registeredMasters?.[kind==='person'?'persons':kind==='equipment'?'equipment':'cargo'];
+   if(!Array.isArray(savedList)||savedList.some(x=>doomed.has(x.id)))throw Error('기준설정 파일 삭제 결과 확인에 실패했습니다.');
   }
- }
- renderPersons();renderEquipments();plan13RenderCargo();syncPreview();updateSummary();
- toast(kindName+' 완전삭제 완료');
+  if(kind==='person')for(const id of ids)plan85ArchivedPersonSelection.delete(id);
+  renderPersons();renderEquipments();plan13RenderCargo();syncPreview();updateSummary();
+  toast(kindName+' '+targets.length+'건 완전삭제 완료');
+  return true;
+ }catch(err){
+  records.splice(0,records.length,...before);
+  try{
+   persist();await plan66FlushPersistence();
+   if(planFolderHandle)await plan17WriteReferenceFolder(true);
+  }catch(restoreErr){console.error('영구삭제 실패 후 기준설정 복구 실패',restoreErr);alert('삭제 실패 후 기존 자료 복구도 확인이 필요합니다. 원본 폴더를 삭제하지 마세요: '+restoreErr.message)}
+  renderPersons();renderEquipments();plan13RenderCargo();syncPreview();updateSummary();
+  alert('완전삭제를 취소했습니다. 기존 등록정보를 유지합니다.\n'+err.message);
+  return false;
+ }finally{plan85ArchiveDeleteBusy=false;plan13RefreshArchiveButtons()}
 }
+async function plan13DeletePermanently(kind,id){return plan85DeleteArchivedRecords(kind,[id])}
+
 function plan13CompleteArchive(state){
  const record=plan13RecordSource(state.kind).find(x=>x.id===state.id&&!x.archived);if(!record)return alert('이미 삭제되었거나 없는 항목입니다.');
  const original={archived:record.archived,archivedAt:record.archivedAt};
@@ -4110,6 +4145,16 @@ remove.onclick=async()=>{const rec=chosenPhoto();if(!rec||photoLocked(rec))retur
  // Selection header: one tri-state checkbox for both select-all and clear-all.
  function makeBulkHeader(kind,table){
   const cfg=KINDS[kind],th=table?.querySelector('thead tr th:first-child');if(!th)return;
+  if(kind==='person'&&plan13ShowArchived.person){
+   const valid=plan13VisibleRecords('person').filter(x=>x.archived).map(x=>x.id);
+   const count=valid.filter(id=>plan85ArchivedPersonSelection.has(id)).length;
+   th.classList.add('plan32-select-col');th.replaceChildren();
+   const label=document.createElement('label');label.className='plan32-bulk-label';label.textContent='선택';
+   const check=document.createElement('input');check.type='checkbox';check.className='plan32-bulk-check';check.setAttribute('aria-label','삭제된 인력 전체 선택 또는 해제');check.title='삭제 목록에서 현재 표시된 인력을 전체 선택 / 해제';
+   check.checked=valid.length>0&&count===valid.length;check.indeterminate=count>0&&count<valid.length;check.disabled=!valid.length;
+   check.addEventListener('change',()=>{for(const id of valid)if(check.checked)plan85ArchivedPersonSelection.add(id);else plan85ArchivedPersonSelection.delete(id);renderPersons()});
+   label.appendChild(check);th.append(label);return;
+  }
   const valid=plan13VisibleRecords(kind).filter(x=>!x.archived).map(x=>x.id),picked=data[cfg.key]||[];
   const count=valid.filter(id=>picked.includes(id)).length;
   th.classList.add('plan32-select-col');th.replaceChildren();
@@ -4179,7 +4224,7 @@ remove.onclick=async()=>{const rec=chosenPhoto();if(!rec||photoLocked(rec))retur
   table.style.setProperty('width',widths.reduce((a,b)=>a+b,0)+'px','important');
   table.style.setProperty('min-width',widths.reduce((a,b)=>a+b,0)+'px','important');
   const people=plan13VisibleRecords('person');
-  body.innerHTML=people.length?people.map(rec=>'<tr><td class="plan32-select-cell"><input type="checkbox" '+(data.persons.includes(rec.id)?'checked':'')+' '+(rec.archived?'disabled':'')+' aria-label="'+esc(rec.name)+' 선택" onchange="togglePerson(\''+rec.id+'\',this.checked)"></td><td class="plan32-actions-cell">'+plan13ManageButtons('person',rec.id,rec.archived)+'</td>'+columns.map(col=>drawPersonCell(rec,col)).join('')+'</tr>').join(''):'<tr><td colspan="'+(2+columns.reduce((n,c)=>n+(c.key==='role'?6:1),0))+'" class="empty">등록된 인력이 없습니다.</td></tr>';
+  body.innerHTML=people.length?people.map(rec=>'<tr><td class="plan32-select-cell">'+(plan13ShowArchived.person?'<input type="checkbox" '+(plan85ArchivedPersonSelection.has(rec.id)?'checked':'')+' aria-label="'+esc(rec.name)+' 삭제 대상 선택" onchange="plan85ToggleArchivedPerson(\''+rec.id+'\',this.checked)">':'<input type="checkbox" '+(data.persons.includes(rec.id)?'checked':'')+' '+(rec.archived?'disabled':'')+' aria-label="'+esc(rec.name)+' 선택" onchange="togglePerson(\''+rec.id+'\',this.checked)">')+'</td><td class="plan32-actions-cell">'+plan13ManageButtons('person',rec.id,rec.archived)+'</td>'+columns.map(col=>drawPersonCell(rec,col)).join('')+'</tr>').join(''):'<tr><td colspan="'+(2+columns.reduce((n,c)=>n+(c.key==='role'?6:1),0))+'" class="empty">등록된 인력이 없습니다.</td></tr>';
   makeBulkHeader('person',table);
   if(scroll)scroll.scrollLeft=savedScroll;
  };
